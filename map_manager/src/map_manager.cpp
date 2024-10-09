@@ -1,15 +1,40 @@
 #include <map_manager/map_manager.hpp>
 
-MapManager::MapManager()
-: Node("map_manager")
+MapManager::MapManager(const std::string& config_file_path)
+: Node("map_manager"), config_file_path_(config_file_path)
 {
     initial_pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/initialpose", 1);
     switch_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_map");
+
+    load_config();
 
     current_map_id_ = 0;
 
     RCLCPP_INFO(this->get_logger(), "Map Navigation Node has been initialized.");
 }
+
+void MapManager::load_config()
+{
+    try {
+        config_ = YAML::LoadFile(config_file_path_);
+    } catch (const YAML::Exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "Error loading YAML file: %s", e.what());
+    }
+}
+
+// void MapManager::load_config()
+// {
+//     try {
+//         YAML::Node config = YAML::LoadFile(config_file_path_);
+//         if (config["entry_points"]) {
+//             config_ = config["entry_points"].as<std::vector<std::string>>();
+//         } else {
+//             RCLCPP_ERROR(this->get_logger(), "No 'map_paths' key found in the configuration file");
+//         }
+//     } catch (const YAML::Exception& e) {
+//         RCLCPP_ERROR(this->get_logger(), "Error reading YAML file: %s", e.what());
+//     }
+// }
 
 void MapManager::process_input(const std::vector<std::string>& input_vector)
 {
@@ -21,9 +46,16 @@ void MapManager::process_input(const std::vector<std::string>& input_vector)
         if (map_id != current_map_id_)
         {
             switch_map(map_id);
+            sleep(5);
+            send_initial_pose(goal_id);
+        }
+        else
+        {
+            send_goal(goal_id);
         }
 
-        send_goal(goal_id);
+        
+        
     }
 }
 
@@ -43,7 +75,7 @@ void MapManager::switch_map(int new_map_id)
         {
             current_map_id_ = new_map_id;
             RCLCPP_INFO(this->get_logger(), "Map switched to ID %d", new_map_id);
-            send_initial_pose();
+            // send_initial_pose(goal_id);
         }
         else
         {
@@ -59,7 +91,7 @@ void MapManager::switch_map(int new_map_id)
 void MapManager::send_goal(int goal_id)
 {
     RCLCPP_INFO(this->get_logger(), "Going to the target point....");
-    sleep(3);
+    sleep(20);
     // auto goal_msg = geometry_msgs::msg::PoseStamped();
     // goal_msg.header.frame_id = "map";
     // goal_msg.header.stamp = this->now();
@@ -74,20 +106,30 @@ void MapManager::send_goal(int goal_id)
     // goal_publisher_->publish(goal_msg);
 }
 
-void MapManager::send_initial_pose()
+void MapManager::send_initial_pose(int goal_id)
 {
     auto initial_pose_msg = geometry_msgs::msg::PoseWithCovarianceStamped();
     initial_pose_msg.header.frame_id = "map";
     initial_pose_msg.header.stamp = this->now();
 
-    initial_pose_msg.pose.pose.position.x = 5.0;
-    initial_pose_msg.pose.pose.position.y = 0.0;
-    initial_pose_msg.pose.pose.orientation.w = 1.0;
-    initial_pose_msg.pose.pose.orientation.x = 0.0;
-    initial_pose_msg.pose.pose.orientation.y = 0.0;
-    initial_pose_msg.pose.pose.orientation.z = 0.0;
+    try {
+        const auto& coordinates = config_["entry_points"][current_map_id_]["points"][goal_id]["coordinates"];
+        
+        if (coordinates && coordinates.IsSequence() && coordinates.size() == 7) {
+            initial_pose_msg.pose.pose.position.x = coordinates[0].as<double>();
+            initial_pose_msg.pose.pose.position.y = coordinates[1].as<double>();
+            initial_pose_msg.pose.pose.position.z = coordinates[2].as<double>();
+            initial_pose_msg.pose.pose.orientation.x = coordinates[3].as<double>();
+            initial_pose_msg.pose.pose.orientation.y = coordinates[4].as<double>();
+            initial_pose_msg.pose.pose.orientation.z = coordinates[5].as<double>();
+            initial_pose_msg.pose.pose.orientation.w = coordinates[6].as<double>();
 
-    RCLCPP_INFO(this->get_logger(), "Sending initial pose");
-    
-    initial_pose_publisher_->publish(initial_pose_msg);
+            RCLCPP_INFO(this->get_logger(), "Sending initial pose for map %d, point %d", current_map_id_, goal_id);
+            initial_pose_publisher_->publish(initial_pose_msg);
+        } else {
+            RCLCPP_WARN(this->get_logger(), "Invalid or missing coordinates for map %d, point %d", current_map_id_, goal_id);
+        }
+    } catch (const YAML::Exception& e) {
+        RCLCPP_ERROR(this->get_logger(), "Error accessing YAML config: %s", e.what());
+    }
 }

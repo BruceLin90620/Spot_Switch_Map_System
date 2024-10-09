@@ -21,7 +21,7 @@ protected:
     
 
 public:
-    explicit MapManager();
+    explicit MapManager(const std::string& config_file_path);
 
     // rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_publisher_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initial_pose_publisher_;
@@ -33,8 +33,9 @@ public:
     void process_input(const std::vector<std::string>& input_vector);
     void switch_map(int new_map_id);
     void send_goal(int goal_id);
-    void send_initial_pose();
+    void send_initial_pose(int goal_id);
 
+    void load_config();
     // std::map<std::string, int> maps_;
     // geometry_msgs::msg::Pose last_odom_pose_;
     // explicit SwitchMapSystem(const rclcpp::NodeOptions & options);
@@ -54,6 +55,8 @@ public:
 
 private:
     // void loadMapPaths(const std::string& config_path);
+    YAML::Node config_;
+    std::string config_file_path_;
 };
 
 #endif 

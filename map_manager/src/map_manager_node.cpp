@@ -3,15 +3,11 @@
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
-    // rclcpp::executors::SingleThreadedExecutor executor;
-    auto node = std::make_shared<MapManager>();
+    auto node = std::make_shared<MapManager>("/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/map_manager/entry_points_data/entry_points.yaml");
     
-    // executor.add_node(node);
-    
-    std::vector<std::string> input = {"02", "11", "12", "21"};
+    std::vector<std::string> input = {"01", "10", "11", "20", "21", "00"};
     node->process_input(input);
     
-    // executor.spin();
     rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
