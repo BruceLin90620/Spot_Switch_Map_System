@@ -9,11 +9,15 @@ endif()
 # find dependencies
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_action REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(switch_map_interfaces REQUIRED)
 
 set( dependencies
   rclcpp
+  rclcpp_action
+  rclcpp_components
   switch_map_interfaces
   geometry_msgs
 )

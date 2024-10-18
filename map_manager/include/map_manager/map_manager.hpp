@@ -9,9 +9,13 @@
 #include <fstream>
 
 #include <rclcpp/rclcpp.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+#include <rclcpp_components/register_node_macro.hpp>
 
 #include "switch_map_interfaces/srv/single_map.hpp"
+#include "switch_map_interfaces/action/send_goal_pose.hpp"
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 
 class MapManager : public rclcpp::Node
 {
@@ -21,12 +25,20 @@ protected:
     
 
 public:
+
+    using SendGoalPose = switch_map_interfaces::action::SendGoalPose;
+    using GoalHandleSendGoalPose = rclcpp_action::ClientGoalHandle<SendGoalPose>;
+
     explicit MapManager(const std::string& config_file_path);
 
-    // rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_publisher_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr goal_publisher_;
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initial_pose_publisher_;
     rclcpp::Client<switch_map_interfaces::srv::SingleMap>::SharedPtr switch_map_client_;
+    rclcpp::Client<switch_map_interfaces::srv::SingleMap>::SharedPtr switch_spot_map_client_;
+
+    rclcpp_action::Client<switch_map_interfaces::action::SendGoalPose>::SharedPtr send_goal_pose_action_client;
     // rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
+
 
     int current_map_id_;
 
@@ -36,6 +48,8 @@ public:
     void send_initial_pose(int goal_id);
 
     void load_config();
+
+    void result_callback(const GoalHandleSendGoalPose::WrappedResult & result);
     // std::map<std::string, int> maps_;
     // geometry_msgs::msg::Pose last_odom_pose_;
     // explicit SwitchMapSystem(const rclcpp::NodeOptions & options);
