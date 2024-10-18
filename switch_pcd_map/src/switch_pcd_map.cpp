@@ -1,7 +1,7 @@
 #include <switch_pcd_map/switch_pcd_map.hpp>
 
 SwitchMapSystem::SwitchMapSystem(const rclcpp::NodeOptions & options)
-: rclcpp::Node("switch_pcd_map", options), tf_frame_("map"), current_map_id_(1)
+: rclcpp::Node("switch_pcd_map", options), tf_frame_("map"), current_map_id_(0)
 {
     cloud_topic_ = "/pointcloud_map";
     tf_frame_ = this->declare_parameter("tf_frame", tf_frame_);

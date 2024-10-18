@@ -8,14 +8,15 @@ MapManager::MapManager(const std::string& config_file_path)
     switch_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_map");
     switch_spot_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_spot_map");
 
-
-    send_goal_pose_action_client = rclcpp_action::create_client<SendGoalPose>(
-        this,
-        "send_goal_pose");
+    // 使用 rmw_qos_profile_t 替代 rclcpp::QoS
+    auto qos_profile = rmw_qos_profile_services_default;
+    qos_profile.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
+    qos_profile.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+    send_goal_pose_client_ = this->create_client<switch_map_interfaces::srv::SendGoalPose>("send_goal_pose", qos_profile);
 
     load_config();
 
-    current_map_id_ = 1;
+    current_map_id_ = 0;
 
     RCLCPP_INFO(this->get_logger(), "Map Navigation Node has been initialized.");
 }
@@ -39,9 +40,9 @@ void MapManager::process_input(const std::vector<std::string>& input_vector)
 
         if (map_id != current_map_id_)
         {
-            switch_map(map_id);
+            switch_map(map_id, goal_id);
             // sleep(5);
-            send_initial_pose(goal_id);
+            // send_initial_pose(goal_id);
         }
         else
         {
@@ -50,7 +51,7 @@ void MapManager::process_input(const std::vector<std::string>& input_vector)
     }
 }
 
-void MapManager::switch_map(int new_map_id)
+void MapManager::switch_map(int new_map_id, int goal_id)
 {
     auto request = std::make_shared<switch_map_interfaces::srv::SingleMap::Request>();
     request->mapid = new_map_id;
@@ -60,15 +61,31 @@ void MapManager::switch_map(int new_map_id)
     auto spot_result_future = switch_spot_map_client_->async_send_request(request);
     auto result_future = switch_map_client_->async_send_request(request);
 
-    if ((rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) == rclcpp::FutureReturnCode::SUCCESS) &&
-        (rclcpp::spin_until_future_complete(this->get_node_base_interface(), spot_result_future) == rclcpp::FutureReturnCode::SUCCESS))
+    if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) == rclcpp::FutureReturnCode::SUCCESS)
     {
         auto result = result_future.get();
         if (result->success)
         {
             current_map_id_ = new_map_id;
             RCLCPP_INFO(this->get_logger(), "Map switched to ID %d", new_map_id);
-            // send_initial_pose(goal_id);
+            send_initial_pose(goal_id);
+        }
+        else
+        {
+            RCLCPP_ERROR(this->get_logger(), "Failed to switch map: Service returned failure");
+        }
+    }
+    else
+    {
+        RCLCPP_ERROR(this->get_logger(), "Service call to switch map timed out");
+    }
+
+    if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), spot_result_future) == rclcpp::FutureReturnCode::SUCCESS)
+    {
+        auto result = spot_result_future.get();
+        if (result->success)
+        {
+            RCLCPP_INFO(this->get_logger(), "Spot map switched to ID %d", new_map_id);
         }
         else
         {
@@ -84,63 +101,39 @@ void MapManager::switch_map(int new_map_id)
 void MapManager::send_goal(int goal_id)
 {
     RCLCPP_INFO(this->get_logger(), "Going to the target point....");
+    auto request = std::make_shared<switch_map_interfaces::srv::SendGoalPose::Request>();
 
-    auto goal_msg = switch_map_interfaces::action::SendGoalPose::Goal();
-    // auto send_goal_options = rclcpp_action::Client<switch_map_interfaces::action::SendGoalPose>::SendGoalOptions();
-    // send_goal_options.goal_response_callback = custom_qos
-    goal_msg.goal_pose.header.frame_id = "map";
-    goal_msg.goal_pose.header.stamp = this->now();
+    request->goal_pose.header.frame_id = "map";
+    request->goal_pose.header.stamp = this->now();
 
     try {
         const auto& coordinates = config_["entry_points"][current_map_id_]["points"][goal_id]["coordinates"];
         
         if (coordinates && coordinates.IsSequence() && coordinates.size() == 7) {
-            goal_msg.goal_pose.pose.position.x = coordinates[0].as<double>();
-            goal_msg.goal_pose.pose.position.y = coordinates[1].as<double>();
-            goal_msg.goal_pose.pose.position.z = coordinates[2].as<double>();
-            goal_msg.goal_pose.pose.orientation.x = coordinates[3].as<double>();
-            goal_msg.goal_pose.pose.orientation.y = coordinates[4].as<double>();
-            goal_msg.goal_pose.pose.orientation.z = coordinates[5].as<double>();
-            goal_msg.goal_pose.pose.orientation.w = coordinates[6].as<double>();
+            request->goal_pose.pose.position.x = coordinates[0].as<double>();
+            request->goal_pose.pose.position.y = coordinates[1].as<double>();
+            request->goal_pose.pose.position.z = coordinates[2].as<double>();
+            request->goal_pose.pose.orientation.x = coordinates[3].as<double>();
+            request->goal_pose.pose.orientation.y = coordinates[4].as<double>();
+            request->goal_pose.pose.orientation.z = coordinates[5].as<double>();
+            request->goal_pose.pose.orientation.w = coordinates[6].as<double>();
 
             RCLCPP_INFO(this->get_logger(), "Sending goal pose for map %d, point %d", current_map_id_, goal_id);
             
-            auto send_goal_options = rclcpp_action::Client<switch_map_interfaces::action::SendGoalPose>::SendGoalOptions();
-            // send_goal_options.goal_response_callback =
-            //     std::bind(&MapManager::goal_response_callback, this, std::placeholders::_1);
-            // send_goal_options.feedback_callback =
-            //     std::bind(&MapManager::feedback_callback, this, std::placeholders::_1, std::placeholders::_2);
-            send_goal_options.result_callback =
-                std::bind(&MapManager::result_callback, this, std::placeholders::_1);
+            auto result_future = send_goal_pose_client_->async_send_request(request);
 
-            auto goal_handle_future = send_goal_pose_action_client->async_send_goal(goal_msg, send_goal_options);
-
-            if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), goal_handle_future) !=
+            if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) ==
                 rclcpp::FutureReturnCode::SUCCESS)
             {
-                RCLCPP_ERROR(this->get_logger(), "Send goal call failed");
-                return;
+                auto result = result_future.get();
+                if (result->success) {
+                    RCLCPP_INFO(this->get_logger(), "Goal sent successfully");
+                } else {
+                    RCLCPP_ERROR(this->get_logger(), "Failed to send goal");
+                }
+            } else {
+                RCLCPP_ERROR(this->get_logger(), "Service call to send goal failed");
             }
-
-            auto goal_handle = goal_handle_future.get();
-            if (!goal_handle) {
-                RCLCPP_ERROR(this->get_logger(), "Goal was rejected by server");
-                return;
-            }
-
-            auto result_future = send_goal_pose_action_client->async_get_result(goal_handle);
-
-            RCLCPP_INFO(this->get_logger(), "Waiting for the action to complete...");
-            
-            if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) !=
-                rclcpp::FutureReturnCode::SUCCESS)
-            {
-                RCLCPP_ERROR(this->get_logger(), "Failed to get result");
-                return;
-            }
-
-            RCLCPP_INFO(this->get_logger(), "Action completed");
-
         } else {
             RCLCPP_WARN(this->get_logger(), "Invalid or missing coordinates for map %d, point %d", current_map_id_, goal_id);
         }
@@ -149,23 +142,23 @@ void MapManager::send_goal(int goal_id)
     }
 }
 
-void MapManager::result_callback(const GoalHandleSendGoalPose::WrappedResult & result)
-{
-    switch (result.code) {
-        case rclcpp_action::ResultCode::SUCCEEDED:
-            RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-            break;
-        case rclcpp_action::ResultCode::ABORTED:
-            RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
-            return;
-        case rclcpp_action::ResultCode::CANCELED:
-            RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
-            return;
-        default:
-            RCLCPP_ERROR(this->get_logger(), "Unknown result code");
-            return;
-    }
-}
+// void MapManager::result_callback(const GoalHandleSendGoalPose::WrappedResult & result)
+// {
+//     switch (result.code) {
+//         case rclcpp_action::ResultCode::SUCCEEDED:
+//             RCLCPP_INFO(this->get_logger(), "Goal succeeded");
+//             break;
+//         case rclcpp_action::ResultCode::ABORTED:
+//             RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
+//             return;
+//         case rclcpp_action::ResultCode::CANCELED:
+//             RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
+//             return;
+//         default:
+//             RCLCPP_ERROR(this->get_logger(), "Unknown result code");
+//             return;
+//     }
+// }
 
 void MapManager::send_initial_pose(int goal_id)
 {

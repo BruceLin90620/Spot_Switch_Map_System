@@ -20,12 +20,11 @@ from bosdyn.client.robot_state import RobotStateClient
 
 import rclpy
 from rclpy.node import Node
-from rclpy.action import ActionServer
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import Point
 from switch_map_interfaces.srv import SingleMap
-from switch_map_interfaces.action import SendGoalPose
+from switch_map_interfaces.srv import SendGoalPose
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
 sys.path.append('/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/spot_graph_nav/')
@@ -64,12 +63,12 @@ class SpotNavigation:
 
     def _initialize(self, *args):
         self._clear_graph()
-        time.sleep(2)
+        time.sleep(1)
         self.graph_nav_interface._upload_graph_and_snapshots()
-        time.sleep(2)
+        time.sleep(1)
         self.graph_nav_interface._set_initial_localization_fiducial()
         print("initial with apriltag")
-        time.sleep(2)
+        time.sleep(1)
         self.graph_nav_interface._list_graph_waypoint_and_edge_ids()
         print("list finished")
         self.load_tag_poses()
@@ -269,7 +268,13 @@ class SpotNavigationNode(Node):
         self.switch_spot_map_service = self.create_service(SingleMap, '/switch_spot_map', self.switch_map_callback)
         self.publisher_ = self.create_publisher(Marker, '/text_marker', 10)
 
-        self._action_server = ActionServer(self, SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback)
+        qos = QoSProfile(
+            depth=1,
+            reliability=ReliabilityPolicy.RELIABLE,
+            durability=DurabilityPolicy.TRANSIENT_LOCAL)
+        
+        self._goal_service = self.create_service(SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback, qos_profile = qos)
+        # self._action_server = ActionServer(self, SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback)
 
         self.graph_nav_target_pose = [0, 0, 0, 0, 0, 0, 0]
         self.map_tag_info = 0
@@ -284,7 +289,7 @@ class SpotNavigationNode(Node):
         bosdyn.client.util.authenticate(robot)
 
         self.lease_client = robot.ensure_client(LeaseClient.default_service_name)
-        self.graph_nav_command_line = SpotNavigation(robot, map_filepath[1], self.lease_client)
+        self.graph_nav_command_line = SpotNavigation(robot, map_filepath[0], self.lease_client)
 
         graph_nav_thread = threading.Thread(target=self.graph_nav_command)
         graph_nav_thread.start()
@@ -352,29 +357,26 @@ class SpotNavigationNode(Node):
 
         # self.graph_nav_command_line._navigate_to_anchor(self.graph_nav_target_pose)
 
-    def send_goal_pose_callback(self, goal_handle):
+    def send_goal_pose_callback(self, request, response):
 
-        self.graph_nav_target_pose[0] = goal_handle.request.goal_pose.pose.position.x
-        self.graph_nav_target_pose[1] = goal_handle.request.goal_pose.pose.position.y
-        self.graph_nav_target_pose[2] = goal_handle.request.goal_pose.pose.position.z
-        self.graph_nav_target_pose[3] = goal_handle.request.goal_pose.pose.orientation.w
-        self.graph_nav_target_pose[4] = goal_handle.request.goal_pose.pose.orientation.x
-        self.graph_nav_target_pose[5] = goal_handle.request.goal_pose.pose.orientation.y
-        self.graph_nav_target_pose[6] = goal_handle.request.goal_pose.pose.orientation.z
+        self.graph_nav_target_pose[0] = request.goal_pose.pose.position.x
+        self.graph_nav_target_pose[1] = request.goal_pose.pose.position.y
+        self.graph_nav_target_pose[2] = request.goal_pose.pose.position.z
+        self.graph_nav_target_pose[3] = request.goal_pose.pose.orientation.w
+        self.graph_nav_target_pose[4] = request.goal_pose.pose.orientation.x
+        self.graph_nav_target_pose[5] = request.goal_pose.pose.orientation.y
+        self.graph_nav_target_pose[6] = request.goal_pose.pose.orientation.z
 
         self.get_logger().info(f"graph_nav_target_pose: {self.graph_nav_target_pose}")
-        time.sleep(3)
+        # time.sleep(3)
         self.graph_nav_command_line._navigate_to_anchor(self.graph_nav_target_pose)
 
-        result = SendGoalPose.Result()
-        result.success = True
-        result.message = "Goal reached successfully"
+        response.success = True
+        response.message = "Goal reached successfully"
 
-        # goal_handle.succeed(result)
-        goal_handle.succeed()
         
         self.get_logger().info('Goal accomplished')
-        return result
+        return response
 
         
 

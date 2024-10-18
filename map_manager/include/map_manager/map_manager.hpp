@@ -13,7 +13,7 @@
 #include <rclcpp_components/register_node_macro.hpp>
 
 #include "switch_map_interfaces/srv/single_map.hpp"
-#include "switch_map_interfaces/action/send_goal_pose.hpp"
+#include "switch_map_interfaces/srv/send_goal_pose.hpp"
 #include <geometry_msgs/msg/pose_with_covariance_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 
@@ -26,8 +26,8 @@ protected:
 
 public:
 
-    using SendGoalPose = switch_map_interfaces::action::SendGoalPose;
-    using GoalHandleSendGoalPose = rclcpp_action::ClientGoalHandle<SendGoalPose>;
+    using SendGoalPose = switch_map_interfaces::srv::SendGoalPose;
+    // using GoalHandleSendGoalPose = rclcpp_action::ClientGoalHandle<SendGoalPose>;
 
     explicit MapManager(const std::string& config_file_path);
 
@@ -35,21 +35,21 @@ public:
     rclcpp::Publisher<geometry_msgs::msg::PoseWithCovarianceStamped>::SharedPtr initial_pose_publisher_;
     rclcpp::Client<switch_map_interfaces::srv::SingleMap>::SharedPtr switch_map_client_;
     rclcpp::Client<switch_map_interfaces::srv::SingleMap>::SharedPtr switch_spot_map_client_;
-
-    rclcpp_action::Client<switch_map_interfaces::action::SendGoalPose>::SharedPtr send_goal_pose_action_client;
+    rclcpp::Client<switch_map_interfaces::srv::SendGoalPose>::SharedPtr send_goal_pose_client_;
+    // rclcpp_action::Client<switch_map_interfaces::action::SendGoalPose>::SharedPtr send_goal_pose_action_client;
     // rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscription_;
 
 
     int current_map_id_;
 
     void process_input(const std::vector<std::string>& input_vector);
-    void switch_map(int new_map_id);
+    void switch_map(int new_map_id, int goal_id);
     void send_goal(int goal_id);
     void send_initial_pose(int goal_id);
 
     void load_config();
 
-    void result_callback(const GoalHandleSendGoalPose::WrappedResult & result);
+    // void result_callback(const GoalHandleSendGoalPose::WrappedResult & result);
     // std::map<std::string, int> maps_;
     // geometry_msgs::msg::Pose last_odom_pose_;
     // explicit SwitchMapSystem(const rclcpp::NodeOptions & options);
