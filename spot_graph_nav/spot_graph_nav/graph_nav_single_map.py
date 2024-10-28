@@ -289,7 +289,7 @@ class SpotNavigationNode(Node):
         bosdyn.client.util.authenticate(robot)
 
         self.lease_client = robot.ensure_client(LeaseClient.default_service_name)
-        self.graph_nav_command_line = SpotNavigation(robot, map_filepath[0], self.lease_client)
+        self.graph_nav_command_line = SpotNavigation(robot, map_filepath[1], self.lease_client)
 
         graph_nav_thread = threading.Thread(target=self.graph_nav_command)
         graph_nav_thread.start()
@@ -355,7 +355,7 @@ class SpotNavigationNode(Node):
 
         self.get_logger().info(f"graph_nav_target_pose: {self.graph_nav_target_pose}")
 
-        # self.graph_nav_command_line._navigate_to_anchor(self.graph_nav_target_pose)
+        self.graph_nav_command_line._navigate_to_anchor(self.graph_nav_target_pose)
 
     def send_goal_pose_callback(self, request, response):
 

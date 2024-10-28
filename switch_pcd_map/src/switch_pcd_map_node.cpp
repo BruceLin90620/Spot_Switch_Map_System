@@ -2,15 +2,19 @@
 
 int main(int argc, char * argv[])
 {
-  rclcpp::init(argc, argv);
-  rclcpp::executors::SingleThreadedExecutor executor;
-  rclcpp::NodeOptions options;
-  auto switch_map_system = std::make_shared<SwitchMapSystem>(options);
+    // Initialize ROS2
+    rclcpp::init(argc, argv);
+    
+    // Create executor and node
+    rclcpp::executors::SingleThreadedExecutor executor;
+    rclcpp::NodeOptions options;
+    auto switch_map_system = std::make_shared<SwitchMapSystem>(options);
 
-  executor.add_node(switch_map_system);
-  executor.spin();
+    // Add node to executor and spin
+    executor.add_node(switch_map_system);
+    executor.spin();
 
-  rclcpp::shutdown();
-
-  return 0;
+    // Cleanup
+    rclcpp::shutdown();
+    return 0;
 }

@@ -1,3 +1,4 @@
+// switch_pcd_map.hpp
 #ifndef SWITCH_PCD_MAP_HPP
 #define SWITCH_PCD_MAP_HPP
 
@@ -18,18 +19,19 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include "switch_map_interfaces/srv/single_map.hpp"
 
+
 class SwitchMapSystem : public rclcpp::Node
 {
+public:
+
+    explicit SwitchMapSystem(const rclcpp::NodeOptions & options);
+
 protected:
+
     std::string tf_frame_;
     std::vector<std::string> file_names_;
     int current_map_id_;
-
-public:
-    explicit SwitchMapSystem(const rclcpp::NodeOptions & options);
-
     sensor_msgs::msg::PointCloud2 cloud_;
-
     std::string cloud_topic_;
     size_t period_ms_;
 
@@ -37,11 +39,16 @@ public:
     rclcpp::TimerBase::SharedPtr timer_;
     rclcpp::Service<switch_map_interfaces::srv::SingleMap>::SharedPtr service_;
 
+
     void publish();
-    void switchMapCallback(const std::shared_ptr<switch_map_interfaces::srv::SingleMap::Request> request, 
-                           std::shared_ptr<switch_map_interfaces::srv::SingleMap::Response> response);
+
+
+    void switchMapCallback(
+        const std::shared_ptr<switch_map_interfaces::srv::SingleMap::Request> request,
+        std::shared_ptr<switch_map_interfaces::srv::SingleMap::Response> response);
 
 private:
+
     void loadMapPaths(const std::string& config_path);
 };
 

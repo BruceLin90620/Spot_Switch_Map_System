@@ -1,25 +1,28 @@
 #include <map_manager/map_manager.hpp>
 
+
 MapManager::MapManager(const std::string& config_file_path)
 : Node("map_manager"), config_file_path_(config_file_path)
 {
     initial_pose_publisher_ = this->create_publisher<geometry_msgs::msg::PoseWithCovarianceStamped>("/initialpose", 1);
     goal_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", 1);
+    
     switch_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_map");
     switch_spot_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_spot_map");
 
-    // 使用 rmw_qos_profile_t 替代 rclcpp::QoS
     auto qos_profile = rmw_qos_profile_services_default;
     qos_profile.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
     qos_profile.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
+    
     send_goal_pose_client_ = this->create_client<switch_map_interfaces::srv::SendGoalPose>("send_goal_pose", qos_profile);
 
     load_config();
-
-    current_map_id_ = 0;
+    
+    current_map_id_ = 1;
 
     RCLCPP_INFO(this->get_logger(), "Map Navigation Node has been initialized.");
 }
+
 
 void MapManager::load_config()
 {
@@ -41,8 +44,6 @@ void MapManager::process_input(const std::vector<std::string>& input_vector)
         if (map_id != current_map_id_)
         {
             switch_map(map_id, goal_id);
-            // sleep(5);
-            // send_initial_pose(goal_id);
         }
         else
         {
@@ -50,6 +51,7 @@ void MapManager::process_input(const std::vector<std::string>& input_vector)
         }
     }
 }
+
 
 void MapManager::switch_map(int new_map_id, int goal_id)
 {
@@ -89,14 +91,15 @@ void MapManager::switch_map(int new_map_id, int goal_id)
         }
         else
         {
-            RCLCPP_ERROR(this->get_logger(), "Failed to switch map: Service returned failure");
+            RCLCPP_ERROR(this->get_logger(), "Failed to switch spot map: Service returned failure");
         }
     }
     else
     {
-        RCLCPP_ERROR(this->get_logger(), "Service call to switch map timed out");
+        RCLCPP_ERROR(this->get_logger(), "Service call to switch spot map timed out");
     }
 }
+
 
 void MapManager::send_goal(int goal_id)
 {
@@ -107,9 +110,11 @@ void MapManager::send_goal(int goal_id)
     request->goal_pose.header.stamp = this->now();
 
     try {
+
         const auto& coordinates = config_["entry_points"][current_map_id_]["points"][goal_id]["coordinates"];
         
         if (coordinates && coordinates.IsSequence() && coordinates.size() == 7) {
+
             request->goal_pose.pose.position.x = coordinates[0].as<double>();
             request->goal_pose.pose.position.y = coordinates[1].as<double>();
             request->goal_pose.pose.position.z = coordinates[2].as<double>();
@@ -142,23 +147,6 @@ void MapManager::send_goal(int goal_id)
     }
 }
 
-// void MapManager::result_callback(const GoalHandleSendGoalPose::WrappedResult & result)
-// {
-//     switch (result.code) {
-//         case rclcpp_action::ResultCode::SUCCEEDED:
-//             RCLCPP_INFO(this->get_logger(), "Goal succeeded");
-//             break;
-//         case rclcpp_action::ResultCode::ABORTED:
-//             RCLCPP_ERROR(this->get_logger(), "Goal was aborted");
-//             return;
-//         case rclcpp_action::ResultCode::CANCELED:
-//             RCLCPP_ERROR(this->get_logger(), "Goal was canceled");
-//             return;
-//         default:
-//             RCLCPP_ERROR(this->get_logger(), "Unknown result code");
-//             return;
-//     }
-// }
 
 void MapManager::send_initial_pose(int goal_id)
 {
@@ -167,9 +155,11 @@ void MapManager::send_initial_pose(int goal_id)
     initial_pose_msg.header.stamp = this->now();
 
     try {
+
         const auto& coordinates = config_["entry_points"][current_map_id_]["points"][goal_id]["coordinates"];
         
         if (coordinates && coordinates.IsSequence() && coordinates.size() == 7) {
+
             initial_pose_msg.pose.pose.position.x = coordinates[0].as<double>();
             initial_pose_msg.pose.pose.position.y = coordinates[1].as<double>();
             initial_pose_msg.pose.pose.position.z = coordinates[2].as<double>();
