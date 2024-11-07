@@ -20,6 +20,10 @@ find_package(rclcpp_components REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(switch_map_interfaces REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
 
 set(dependencies
   pcl_conversions
@@ -29,6 +33,10 @@ set(dependencies
   EIGEN3
   PCL
   switch_map_interfaces
+  std_msgs
+  geometry_msgs
+  tf2_ros
+  tf2_eigen
 )
 
 ### Build the library

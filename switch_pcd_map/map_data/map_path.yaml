@@ -1,4 +1,4 @@
 map_paths:
-  - /home/spot/maps/graphnav/cslmap_demoarea2.walk/point_cloud.pcd
-  - /home/spot/maps/graphnav/cslmap_research_area.walk/point_cloud.pcd
-  - /home/spot/maps/graphnav/cslmap_tea_room2.walk/point_cloud.pcd
+  - /home/spot/maps/cslmap_demoarea2.walk/point_cloud.pcd
+  - /home/spot/maps/cslmap_research_area.walk/point_cloud.pcd
+  - /home/spot/maps/cslmap_tea_room2.walk/point_cloud.pcd
