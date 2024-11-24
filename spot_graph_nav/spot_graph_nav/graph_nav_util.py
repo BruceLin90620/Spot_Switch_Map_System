@@ -4,6 +4,7 @@ import time
 import yaml
 import sys
 import threading
+import math
 
 import bosdyn.client
 import bosdyn.client.util
@@ -229,6 +230,47 @@ class GraphNavInterface:
             self._upload_filepath = upload_path[:-1]
         else:
             self._upload_filepath = upload_path
+
+    def _get_apriltag_info(self, *args):
+        for tag in self._current_graph.anchoring.objects:
+            pos = tag.seed_tform_object.position
+            ori = tag.seed_tform_object.rotation
+            # pretty_print_waypoints(ori)
+            print("id: {} x: {} y: {} z: {}".format(tag.id, pos.x, pos.y, pos.z))
+            print("id: {} x: {} y: {} z: {} w: {}".format(tag.id, ori.x, ori.y, ori.z, ori.w))
+
+    def _save_apriltag_info(self):
+        tags_data = {}
+    
+        for tag in self._current_graph.anchoring.objects:
+            pos = tag.seed_tform_object.position
+            ori = tag.seed_tform_object.rotation
+            
+            # 為每個標籤創建一個子字典
+            tag_info = {
+                'position': {
+                    'x': float(pos.x),
+                    'y': float(pos.y),
+                    'z': float(pos.z)
+                },
+                'orientation': {
+                    'x': float(ori.x),
+                    'y': float(ori.y),
+                    'z': float(ori.z),
+                    'w': float(ori.w)
+                }
+            }
+            
+            # 使用標籤 ID 作為鍵
+            tags_data[f'{tag.id}'] = tag_info
+            
+            # 如果你還想要在控制台看到輸出，可以保留這些 print 語句
+            print("id: {} x: {} y: {} z: {}".format(tag.id, pos.x, pos.y, pos.z))
+            print("id: {} x: {} y: {} z: {} w: {}".format(tag.id, ori.x, ori.y, ori.z, ori.w))
+        
+        # 將資料寫入 YAML 檔案
+        with open('tags_pose.yaml', 'w') as yaml_file:
+            yaml.dump(tags_data, yaml_file, default_flow_style=False)
 
 
 
