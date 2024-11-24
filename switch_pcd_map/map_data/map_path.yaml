@@ -1,4 +1,6 @@
 map_paths:
-  - /home/spot/maps/cslmap_demoarea2.walk/point_cloud.pcd
-  - /home/spot/maps/cslmap_research_area.walk/point_cloud.pcd
-  - /home/spot/maps/cslmap_tea_room2.walk/point_cloud.pcd
+  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_112202.walk/point_cloud.pcd
+  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_525354_112202.walk/point_cloud.pcd
+  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_5355_112201.walk/point_cloud.pcd
+  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_5456_112201.walk/point_cloud.pcd
+  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_5456_112201.walk/point_cloud.pcd

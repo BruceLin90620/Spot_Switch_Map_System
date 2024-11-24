@@ -5,8 +5,8 @@
 SwitchMapSystem::SwitchMapSystem(const rclcpp::NodeOptions & options)
 : rclcpp::Node("switch_pcd_map", options),
   tf_frame_("map"),
-  current_map_id_(1),
-  current_area_("Research_Area")
+  current_map_id_(0),
+  current_area_("5152")
 {
     // Initialize parameters
     cloud_topic_ = "/pointcloud_map";
@@ -20,9 +20,11 @@ SwitchMapSystem::SwitchMapSystem(const rclcpp::NodeOptions & options)
     
     // Initialize area mapping
     area_mapping_ = {
-        {0, "Demo_Area"},
-        {1, "Research_Area"},
-        {2, "Tea_Room"}
+        {0, "5152"},
+        {1, "525354"},
+        {2, "5355"},
+        {3, "5456"},
+        {4, "5556"},
     };
     
     // Load configurations
@@ -80,7 +82,7 @@ void SwitchMapSystem::switchMapCallback(
     std::shared_ptr<switch_map_interfaces::srv::SingleMap::Response> response)
 {
     int64_t requested_map_id = request->mapid;
-
+    std::this_thread::sleep_for(std::chrono::seconds(5));
     if (requested_map_id < 0 || static_cast<size_t>(requested_map_id) >= file_names_.size()) {
         RCLCPP_ERROR(get_logger(), "Invalid map ID: %ld", requested_map_id);
         response->success = false;
@@ -218,7 +220,7 @@ std::pair<int, double> SwitchMapSystem::findVisibleTags()
     try {
         // 獲取所有的frame
         std::string frames = tf_buffer_->allFramesAsString();
-        RCLCPP_INFO(get_logger(), "Current TF frames:\n%s", frames.c_str());
+        // RCLCPP_INFO(get_logger(), "Current TF frames:\n%s", frames.c_str());
 
         // 尋找所有fiducial frames
         std::vector<std::string> fiducial_frames;
@@ -293,7 +295,6 @@ std::pair<int, double> SwitchMapSystem::findVisibleTags()
                         std::stoi(frame.substr(9)), e.what());
                 continue;
             }
-            
         }
         
         if (visible_tags.empty()) {

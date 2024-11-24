@@ -51,35 +51,131 @@
 #         coordinates:
 #           [0.8940051794052124, 5.714936256408691, 0.0, 0.7266883458440254, 0.0, 0.0, 0.6869672830742918]
 
+# entry_points:
+#   - map_id: 0 # coordinates: [x, y, z, x, y, z, w]
+#     points:
+#       - point_id: 0
+#         coordinates:
+#           [1.54033, 0.32314, 0, 0, 0, -0.993723, 0.111865]
+#       - point_id: 1
+#         coordinates:
+#           [5.64424, -7.05731, 0, 0, 0, 0.0356455, 0.999364]
+#       # - point_id: 2
+#       #   coordinates:
+#       #     [1.18928, 1.71568, 0, 0, 0, -0.707107, 0.707107]
+#   - map_id: 1
+#     points:
+#       - point_id: 0
+#         coordinates:
+#           [-0.0161545, -3.47788, 0, 0, 0, -0.00837623, 0.999965]
+#       - point_id: 1
+#         coordinates:
+#           [4.72789, 0.263981, 0, 0, 0, 0.705196, 0.709012]
+#       - point_id: 2
+#         coordinates:
+#           [1.31747, 4.13396, 0, 0, 0, -0.999962, 0.00871513]
+#   - map_id: 2
+#     points:
+#       - point_id: 0
+#         coordinates:
+#           [0.674482, 0.0901538, 0, 0, 0, 0.687625, 0.726066]
+#       - point_id: 1
+#         coordinates:
+#           [0.810017, 5.1503, 0, 0, 0, 0.763143, 0.64623]
+
+
+# csl inside
+# entry_points:
+#   - map_id: 0 # coordinates: [x, y, z, x, y, z, w]
+#     points:
+#       - point_id: 0
+#         coordinates:
+#           [0.721059, -0.0884507]
+#       - point_id: 1
+#         coordinates:
+#           [1.2029, -7.05731]
+#       - point_id: 2
+#         coordinates:
+#           [5.64424, -7.05731]
+#   - map_id: 1
+#     points:
+#       - point_id: 0
+#         coordinates:
+#           [-0.0161545, -3.47788]
+#       - point_id: 1
+#         coordinates:
+#           [4.35824, -3.44802]
+#       - point_id: 2
+#         coordinates:
+#           [4.65265, 3.76633]
+#       - point_id: 3
+#         coordinates:
+#           [1.31747, 4.13396]
+#   - map_id: 2
+#     points:
+#       - point_id: 0
+#         coordinates:
+#           [0.674482, 0.0901538]
+#       - point_id: 1
+#         coordinates:
+#           [0.710017, 5.4503]
+
+#csl outside
 entry_points:
   - map_id: 0 # coordinates: [x, y, z, x, y, z, w]
     points:
       - point_id: 0
         coordinates:
-          [1.54033, 0.32314, 0, 0, 0, -0.993723, 0.111865]
+          [1.57841, 0.413108]
       - point_id: 1
         coordinates:
-          [5.64424, -7.05731, 0, 0, 0, 0.0356455, 0.999364]
-      # - point_id: 2
-      #   coordinates:
-      #     [1.18928, 1.71568, 0, 0, 0, -0.707107, 0.707107]
+          [2.4572, 24.1905]
+          
   - map_id: 1
     points:
       - point_id: 0
         coordinates:
-          [-0.0161545, -3.47788, 0, 0, 0, -0.00837623, 0.999965]
+          [0.996263, 0.2118]
       - point_id: 1
         coordinates:
-          [4.72789, 0.263981, 0, 0, 0, 0.705196, 0.709012]
+          [2.79438, -29.357]
       - point_id: 2
         coordinates:
-          [1.31747, 4.13396, 0, 0, 0, -0.999962, 0.00871513]
+          [-4.46526, -31.9094]
+      - point_id: 3
+        coordinates:
+          [2.24764, -64.0794]
+
   - map_id: 2
     points:
       - point_id: 0
         coordinates:
-          [0.674482, 0.0901538, 0, 0, 0, 0.687625, 0.726066]
+          [0.884402, 0.123075]
       - point_id: 1
         coordinates:
-          [0.810017, 5.1503, 0, 0, 0, 0.763143, 0.64623]
+          [-1.98478, -8.7861]
+      - point_id: 2
+        coordinates:
+          [-116.532, -8.07352]
+      - point_id: 3
+        coordinates:
+          [-115.957, -3.32845]
+
+  - map_id: 3
+    points:
+      - point_id: 0
+        coordinates:
+          [1.93951, 1.46512]
+      - point_id: 1
+        coordinates:
+          [0.710017, 5.4503]
+  - map_id: 4
+    points:
+      - point_id: 0
+        coordinates:
+          [0.674482, 0.0901538]
+      - point_id: 1
+        coordinates:
+          [-87.1951, 19.8134]
+
 
