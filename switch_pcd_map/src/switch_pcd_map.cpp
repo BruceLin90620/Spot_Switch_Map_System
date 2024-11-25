@@ -18,14 +18,6 @@ SwitchMapSystem::SwitchMapSystem(const rclcpp::NodeOptions & options)
         "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/config/tags_position.yaml"
     );
     
-    // // Initialize area mapping
-    // area_mapping_ = {
-    //     {0, "5152"},
-    //     {1, "525354"},
-    //     {2, "5355"},
-    //     {3, "5456"},
-    //     {4, "5556"},
-    // };
     
     // Load configurations
     loadMapPaths(this->declare_parameter<std::string>(
