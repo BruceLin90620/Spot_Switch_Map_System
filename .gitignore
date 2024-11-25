@@ -44,6 +44,10 @@ qtcreator-*
 
 *~
 
+# Custom project specific
+maps/csl_inside/*.walk
+maps/csl_outside/*.walk
+
 # Emacs
 .#*
 

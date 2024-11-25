@@ -38,11 +38,11 @@ from graph_nav_util import GraphNavInterface
 #                 1 : "/home/spot/graph_nav/maps/cslmap_research_area.walk",
 #                 2 : "/home/spot/graph_nav/maps/cslmap_tea_room2.walk"}
 
-map_filepath = {0 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_112202.walk", 
-                1 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_525354_112202.walk",
-                2 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_5355_112201.walk",
-                3 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_5456_112201.walk",
-                4 : "/home/spot/spot_map_switching_ws/src/maps/cslmap_tea_room2.walk",}
+# map_filepath = {0 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_112202.walk", 
+#                 1 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_525354_112202.walk",
+#                 2 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_5355_112201.walk",
+#                 3 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_5456_112201.walk",
+#                 4 : "/home/spot/spot_map_switching_ws/src/maps/cslmap_tea_room2.walk",}
 
 class SpotNavigation:
     def __init__(self, robot, upload_path, lease_client, tag_poses_file='/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/tags_pose_data/tags_pose.yaml'):
@@ -68,16 +68,35 @@ class SpotNavigation:
         }
 
     def _initialize(self, *args):
-        self._clear_graph()
-        time.sleep(1)
-        self.graph_nav_interface._upload_graph_and_snapshots()
-        time.sleep(1)
-        self.graph_nav_interface._set_initial_localization_fiducial()
-        print("initial with apriltag")
-        time.sleep(1)
-        self.graph_nav_interface._list_graph_waypoint_and_edge_ids()
-        print("list finished")
-        self.load_tag_poses()
+        while True: 
+            try:
+                self._clear_graph()
+                time.sleep(1)
+                self._clear_graph()
+                time.sleep(1)
+                self.graph_nav_interface._upload_graph_and_snapshots()
+                time.sleep(1)
+                self.graph_nav_interface._set_initial_localization_fiducial()
+                print("initial with apriltag")
+                time.sleep(1)
+                self.graph_nav_interface._list_graph_waypoint_and_edge_ids()
+                print("list finished")
+                self.load_tag_poses()
+                break
+
+            except Exception as e:
+                print(f"Initialization error: {str(e)}")
+                while True:
+                    choice = input("\nPlease choose:\n1. Reinitialize\n2. Exit program\nEnter (1 or 2): ")
+                    if choice == '1':
+                        print("\nRestarting initialization...\n")
+                        break  
+                    elif choice == '2':
+                        print("Program terminated")
+                        import sys
+                        sys.exit(0)
+                    else:
+                        print("Invalid input, please enter 1 or 2")
 
     def _take_lease(self, *args):
         self._lease_client.take()
@@ -273,6 +292,9 @@ class SpotNavigationNode(Node):
     def __init__(self):
         super().__init__('spot_navigation')
         
+        self.map_config_path = '/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/config/map_path.yaml'
+        self.map_paths = self.load_map_paths()
+
         self.graph_nav = self.create_subscription(PoseStamped, '/move_base_simple/goal', self.graph_nav_callback, 1)
         self.switch_spot_map_service = self.create_service(SingleMap, '/switch_spot_map', self.switch_map_callback)
         self.publisher_ = self.create_publisher(Marker, '/text_marker', 10)
@@ -298,8 +320,9 @@ class SpotNavigationNode(Node):
         bosdyn.client.util.authenticate(robot)
 
         self.lease_client = robot.ensure_client(LeaseClient.default_service_name)
-        print(map_filepath[0])
-        self.graph_nav_command_line = SpotNavigation(robot, map_filepath[0], self.lease_client)
+
+        print(f"Loading initial map: {self.map_paths[0]}")
+        self.graph_nav_command_line = SpotNavigation(robot, self.map_paths[0], self.lease_client)
 
         graph_nav_thread = threading.Thread(target=self.graph_nav_command)
         graph_nav_thread.start()
@@ -309,6 +332,19 @@ class SpotNavigationNode(Node):
 
         # self.timer = self.create_timer(0.01, self.timer_callback)
 
+    def load_map_paths(self):
+        """Load map paths from YAML file"""
+        try:
+            with open(self.map_config_path, 'r') as file:
+                config = yaml.safe_load(file)
+                if config["map_paths"]:
+                    return config["map_paths"]
+                else:
+                    self.get_logger().error("No 'map_paths' key found in the configuration file")
+                    raise RuntimeError("Invalid configuration file format")
+        except Exception as e:
+            self.get_logger().error(f"Error reading map paths file: {str(e)}")
+            raise
 
     def load_tag_poses(self):
         try:
@@ -319,15 +355,15 @@ class SpotNavigationNode(Node):
             print(f"Error: The file {self._tag_poses_file} was not found.")
 
     def switch_map_callback(self, request, response):
-        if request.mapid in map_filepath:
-            self.get_logger().info(f'Changing the map to: {map_filepath[request.mapid]}')
-            self.graph_nav_command_line.graph_nav_interface._set_upload_filepath(map_filepath[request.mapid])
+        if request.mapid < len(self.map_paths):
+            self.get_logger().info(f'Changing the map to: {self.map_paths[request.mapid]}')
+            self.graph_nav_command_line.graph_nav_interface._set_upload_filepath(self.map_paths[request.mapid])
             response.success = True
             self.graph_nav_command_line._initialize()
         else:
             response.success = False
+            self.get_logger().error(f'Invalid map ID: {request.mapid}')
         return response
-
 
     def timer_callback(self):
         for tag_id, pose in self.map_tag_info.items():
@@ -413,7 +449,6 @@ class SpotNavigationNode(Node):
             )
             return False
 
-import estop_gui
 
 def main():
     rclpy.init()

@@ -219,64 +219,25 @@ void MapManager::send_goal(int goal_id) {
             std::cout << "Position: (" << request->goal_pose.pose.position.x 
                     << ", " << request->goal_pose.pose.position.y << ")" << std::endl;
             
-            std::cout << "\nPlease choose an action:\n";
-            std::cout << "1: Send this goal\n";
-            std::cout << "2: Skip to next goal\n";
-            std::cout << "3: Abort sequence\n";
-            std::cout << "Enter your choice (1-3): ";
 
-            std::string input;
-            if(!std::getline(std::cin, input)) {
-                RCLCPP_ERROR(this->get_logger(), "Failed to read input");
-                path_sequence_.clear();
-                return;
-            }
+            RCLCPP_INFO(this->get_logger(), "Sending goal as confirmed by user...");
+            auto result_future = send_goal_pose_client_->async_send_request(request);
 
-            if (input.empty()) {
-                RCLCPP_ERROR(this->get_logger(), "Empty input received");
-                handle_send_failure();
-                return;
-            }
-
-            switch (input[0]) {
-                case '1': {
-                    RCLCPP_INFO(this->get_logger(), "Sending goal as confirmed by user...");
-                    auto result_future = send_goal_pose_client_->async_send_request(request);
-
-                    if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) ==
-                        rclcpp::FutureReturnCode::SUCCESS)
-                    {
-                        auto result = result_future.get();
-                        if (result->success) {
-                            RCLCPP_INFO(this->get_logger(), "Goal sent successfully");
-                        } else {
-                            RCLCPP_ERROR(this->get_logger(), "Failed to send goal");
-                            handle_send_failure();
-                        }
-                    } else {
-                        RCLCPP_ERROR(this->get_logger(), "Service call to send goal failed");
-                        handle_send_failure();
-                    }
-                    break;
-                }
-                case '2':
-                    if (current_sequence_index_ < path_sequence_.size() - 1) {
-                        RCLCPP_INFO(this->get_logger(), "Skipping to next goal...");
-                        current_sequence_index_++;
-                    } else {
-                        RCLCPP_INFO(this->get_logger(), "No more goals in sequence. Aborting...");
-                        path_sequence_.clear();
-                    }
-                    break;
-                case '3':
-                    RCLCPP_INFO(this->get_logger(), "Aborting goal sequence...");
-                    path_sequence_.clear();
-                    break;
-                default:
-                    RCLCPP_WARN(this->get_logger(), "Invalid input, handling as failure");
+            if (rclcpp::spin_until_future_complete(this->get_node_base_interface(), result_future) ==
+                rclcpp::FutureReturnCode::SUCCESS)
+            {
+                auto result = result_future.get();
+                if (result->success) {
+                    RCLCPP_INFO(this->get_logger(), "Goal sent successfully");
+                } else {
+                    RCLCPP_ERROR(this->get_logger(), "Failed to send goal");
                     handle_send_failure();
-                    break;
+                }
+            } else {
+                RCLCPP_ERROR(this->get_logger(), "Service call to send goal failed");
+                handle_send_failure();
             }
+
         }
         else {
             RCLCPP_WARN(this->get_logger(), "No points found for map %d", current_map_id_);
