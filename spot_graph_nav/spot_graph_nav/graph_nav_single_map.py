@@ -29,20 +29,7 @@ from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPo
 
 sys.path.append('/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/spot_graph_nav/')
 from graph_nav_util import GraphNavInterface
-# import graph_nav_util
 
-# map_0 = "/home/spot/graph_nav/maps/cslmap_demo_area.walk"
-# map_1 = "/home/spot/graph_nav/maps/cslmap_research_area.walk"
-# map_2 = "/home/spot/graph_nav/maps/cslmap_tea_room.walk"
-# map_filepath = {0 : "/home/spot/graph_nav/maps/cslmap_demoarea2.walk", 
-#                 1 : "/home/spot/graph_nav/maps/cslmap_research_area.walk",
-#                 2 : "/home/spot/graph_nav/maps/cslmap_tea_room2.walk"}
-
-# map_filepath = {0 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_112202.walk", 
-#                 1 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_525354_112202.walk",
-#                 2 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_5355_112201.walk",
-#                 3 : "/home/spot/spot_map_switching_ws/src/maps/csl_outside_5456_112201.walk",
-#                 4 : "/home/spot/spot_map_switching_ws/src/maps/cslmap_tea_room2.walk",}
 
 class SpotNavigation:
     def __init__(self, robot, upload_path, lease_client, tag_poses_file='/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/tags_pose_data/tags_pose.yaml'):
