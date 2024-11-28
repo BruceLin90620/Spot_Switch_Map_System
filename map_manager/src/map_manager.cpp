@@ -3,8 +3,6 @@
 MapManager::MapManager(const std::string& config_file_path)
 : Node("map_manager"), config_file_path_(config_file_path)
 {
-    goal_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", 1);
-    
     switch_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_map");
     switch_spot_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_spot_map");
 
@@ -14,6 +12,12 @@ MapManager::MapManager(const std::string& config_file_path)
     
     send_goal_pose_client_ = this->create_client<switch_map_interfaces::srv::SendGoalPose>(
         "send_goal_pose", qos_profile);
+
+    routing_path_service_ = this->create_service<switch_map_interfaces::srv::GoalPath>(
+        "goal_path",
+        std::bind(&MapManager::MapManager, this, 
+                  std::placeholders::_1, std::placeholders::_2)
+    );
 
     load_config();
     RCLCPP_INFO(this->get_logger(), "Map Navigation Node has been initialized.");
