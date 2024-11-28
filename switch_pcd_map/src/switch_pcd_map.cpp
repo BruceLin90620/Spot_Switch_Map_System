@@ -15,22 +15,14 @@ SwitchMapSystem::SwitchMapSystem(const rclcpp::NodeOptions & options)
     
     tags_poses_file_ = this->declare_parameter<std::string>(
         "tags_poses_file",
-        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_pcd_map/map_data/tags_pose.yaml"
+        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/config/tags_position.yaml"
     );
     
-    // Initialize area mapping
-    area_mapping_ = {
-        {0, "5152"},
-        {1, "525354"},
-        {2, "5355"},
-        {3, "5456"},
-        {4, "5556"},
-    };
     
     // Load configurations
     loadMapPaths(this->declare_parameter<std::string>(
         "config_path",
-        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_pcd_map/map_data/map_path.yaml"
+        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/config/map_path.yaml"
     ));
     loadAllTagPoses();
     
@@ -130,13 +122,21 @@ void SwitchMapSystem::switchMapCallback(
     response->success = true;
 }
 
-// 地圖路徑載入
 void SwitchMapSystem::loadMapPaths(const std::string& config_path)
 {
     try {
         YAML::Node config = YAML::LoadFile(config_path);
         if (config["map_paths"]) {
-            file_names_ = config["map_paths"].as<std::vector<std::string>>();
+            // First get the original paths
+            auto original_paths = config["map_paths"].as<std::vector<std::string>>();
+            
+            // Clear existing file names
+            file_names_.clear();
+            
+            // Add suffix to each path and store in file_names_
+            for (const auto& path : original_paths) {
+                file_names_.push_back(path + "/point_cloud.pcd");
+            }
         } else {
             RCLCPP_ERROR(get_logger(), "No 'map_paths' key found in the configuration file");
             throw std::runtime_error{"Invalid configuration file format"};
@@ -152,21 +152,32 @@ void SwitchMapSystem::loadAllTagPoses()
 {
     try {
         YAML::Node config = YAML::LoadFile(tags_poses_file_);
+        
+        // Clear existing mappings
+        area_mapping_.clear();
+        int area_index = 0;
+
+        // Iterate through all top-level entries (area names)
         for (const auto& area_it : config) {
             std::string area_name = area_it.first.as<std::string>();
-            std::map<int, TagPose> area_tags;
             
+            // Add to area mapping
+            area_mapping_[area_index] = area_name;
+            area_index++;
+
+            // Load tag poses for this area
+            std::map<int, TagPose> area_tags;
             for (const auto& tag_it : area_it.second) {
                 int tag_id = std::stoi(tag_it.first.as<std::string>());
                 auto pose_node = tag_it.second;
                 
                 TagPose tag_pose;
-                // 讀取位置
+                // Read position
                 tag_pose.position.x = pose_node["position"]["x"].as<double>();
                 tag_pose.position.y = pose_node["position"]["y"].as<double>();
                 tag_pose.position.z = pose_node["position"]["z"].as<double>();
                 
-                // 讀取方向
+                // Read orientation
                 tag_pose.orientation.x = pose_node["orientation"]["x"].as<double>();
                 tag_pose.orientation.y = pose_node["orientation"]["y"].as<double>();
                 tag_pose.orientation.z = pose_node["orientation"]["z"].as<double>();
@@ -177,7 +188,12 @@ void SwitchMapSystem::loadAllTagPoses()
             
             all_tag_poses_[area_name] = area_tags;
         }
-        RCLCPP_INFO(get_logger(), "Successfully loaded all tag poses");
+
+        RCLCPP_INFO(get_logger(), "Successfully loaded tag poses and created area mapping:");
+        for (const auto& [index, area_name] : area_mapping_) {
+            RCLCPP_INFO(get_logger(), "Area index %d: %s", index, area_name.c_str());
+        }
+
     } catch (const std::exception& e) {
         RCLCPP_ERROR(get_logger(), "Error loading tag poses: %s", e.what());
         throw;

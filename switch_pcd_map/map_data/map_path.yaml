@@ -1,6 +1,0 @@
-map_paths:
-  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_112202.walk/point_cloud.pcd
-  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_525354_112202.walk/point_cloud.pcd
-  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_5355_112201.walk/point_cloud.pcd
-  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_5456_112201.walk/point_cloud.pcd
-  - /home/spot/spot_map_switching_ws/src/maps/csl_outside_5456_112201.walk/point_cloud.pcd

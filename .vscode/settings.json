@@ -78,5 +78,6 @@
         "typeinfo": "cpp",
         "valarray": "cpp",
         "variant": "cpp"
-    }
+    },
+    "cmake.sourceDirectory": "/home/bruce/CSL/Spot/spot_map_switching_ws/src/Spot_Switch_Map_System/map_manager"
 }

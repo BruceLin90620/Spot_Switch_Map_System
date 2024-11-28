@@ -13,7 +13,11 @@ An industrial inspection system was developed using Boston Dynamics' Spot. Imple
 ### Switch PCD Map
 - Handles map publishing to the localization system and determines the robot's initial position by detecting nearby AprilTags.
 
-<img src="./images/switch_map_framework.png" width="640px">
+<img src="./images/switch_map_framework_v2.png" width="640px">
 
 ## **Demo**
-<a href="https://youtu.be/ZL_bb400D3o?si=JQu_fL6QrJcjI_Wx" title="Link Title"><img src="./images/demo.png" alt="Alternate Text" /></a>
+### City Science Lab Test Demo
+<a href="https://youtu.be/ZL_bb400D3o?si=JQu_fL6QrJcjI_Wx" title="Link Title"><img src="./images/demo_csl.png" alt="Alternate Text" /></a>
+
+### Outdoor Test Demo
+<a href="https://youtu.be/LI97OdDDBUY?si=Lni16U4oqysuG10Y" title="Link Title"><img src="./images/demo_outdoor.png" alt="Alternate Text" /></a>

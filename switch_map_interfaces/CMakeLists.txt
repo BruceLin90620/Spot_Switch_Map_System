@@ -16,6 +16,7 @@ find_package(geometry_msgs REQUIRED)
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/SingleMap.srv"
   "srv/SendGoalPose.srv"
+  "srv/GoalPath.srv"
   "action/SendGoalPose.action"
   DEPENDENCIES geometry_msgs
 )
