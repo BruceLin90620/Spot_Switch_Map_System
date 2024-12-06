@@ -12,13 +12,17 @@ find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(switch_map_interfaces REQUIRED)
+find_package(routing_agent_interfaces REQUIRED)
 find_package(yaml-cpp REQUIRED)
+find_package(nlohmann_json REQUIRED)
+
 
 set(dependencies
   rclcpp
   rclcpp_action
   rclcpp_components
   switch_map_interfaces
+  routing_agent_interfaces
   geometry_msgs
 )
 
@@ -54,6 +58,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME}
   pose_utils
   yaml-cpp
+  nlohmann_json::nlohmann_json
 )
 
 ament_target_dependencies(${PROJECT_NAME}

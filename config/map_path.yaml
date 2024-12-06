@@ -1,11 +1,11 @@
-map_paths:
-  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_112202.walk
-  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_525354_112202.walk
-  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_5355_112201.walk
-  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_5456_112201.walk
-  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_5556_112201.walk
-
 # map_paths:
-#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_inside/cslmap_demoarea2.walk
-#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_inside/cslmap_research_area.walk
-#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_inside/cslmap_tea_room2.walk
+#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_112202.walk
+#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_525354_112202.walk
+#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_5355_112201.walk
+#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_5456_112201.walk
+#   - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_outside/csl_outside_5556_112201.walk
+
+map_paths:
+  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_inside/cslmap_demoarea2.walk
+  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_inside/cslmap_research_area.walk
+  - /home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/maps/csl_inside/cslmap_tea_room2.walk
