@@ -1,25 +1,25 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>spot_graph_nav</name>
+  <name>switch_map_system_bringup</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
   <maintainer email="brucelin90620@gmail.com">bruce</maintainer>
   <license>TODO: License declaration</license>
 
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
-  <test_depend>ament_copyright</test_depend>
-  <test_depend>ament_flake8</test_depend>
-  <test_depend>ament_pep257</test_depend>
-  <test_depend>python3-pytest</test_depend>
-
-  <depend>rclpy</depend>
-  <depend>rclcpp_action</depend>
-  <depend>switch_map_interfaces</depend>
+  <depend>rclcpp</depend>
   <depend>launch_ros</depend>
   <depend>launch</depend>
+  <depend>spot_graph_nav</depend>
+  <depend>switch_pcd_map</depend>
+  <depend>map_manager</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
 
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

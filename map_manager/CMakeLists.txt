@@ -15,6 +15,8 @@ find_package(switch_map_interfaces REQUIRED)
 find_package(routing_agent_interfaces REQUIRED)
 find_package(yaml-cpp REQUIRED)
 find_package(nlohmann_json REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
 
 
 set(dependencies
@@ -24,6 +26,8 @@ set(dependencies
   switch_map_interfaces
   routing_agent_interfaces
   geometry_msgs
+  tf2
+  tf2_geometry_msgs
 )
 
 include_directories(
@@ -31,19 +35,6 @@ include_directories(
   ${ament_INCLUDE_DIRS}
 )
 
-# Build pose_utils library
-add_library(pose_utils SHARED
-  src/pose_utils.cpp
-)
-
-target_include_directories(pose_utils PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-)
-
-ament_target_dependencies(pose_utils
-  ${dependencies}
-)
 
 # Build the main library
 add_library(${PROJECT_NAME} SHARED
@@ -56,7 +47,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 )
 
 target_link_libraries(${PROJECT_NAME}
-  pose_utils
   yaml-cpp
   nlohmann_json::nlohmann_json
 )
@@ -70,7 +60,6 @@ add_executable(map_manager_node src/map_manager_node.cpp)
 
 target_link_libraries(map_manager_node
   ${PROJECT_NAME}
-  pose_utils
 )
 
 ament_target_dependencies(map_manager_node
@@ -80,7 +69,6 @@ ament_target_dependencies(map_manager_node
 # Install
 install(TARGETS
   ${PROJECT_NAME}
-  pose_utils
   map_manager_node
   ARCHIVE DESTINATION lib
   LIBRARY DESTINATION lib
@@ -91,6 +79,11 @@ install(DIRECTORY include/
   DESTINATION include/
 )
 
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
@@ -98,6 +91,6 @@ endif()
 
 ament_export_dependencies(${dependencies})
 ament_export_include_directories(include)
-ament_export_libraries(${PROJECT_NAME} pose_utils)
+ament_export_libraries(${PROJECT_NAME})
 
 ament_package()
