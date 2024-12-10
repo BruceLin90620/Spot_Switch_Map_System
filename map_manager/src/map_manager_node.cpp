@@ -3,14 +3,23 @@
 int main(int argc, char * argv[])
 {
     rclcpp::init(argc, argv);
+    auto node = std::make_shared<MapManager>();
 
-    auto node = std::make_shared<MapManager>("/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/config/entry_points.yaml");
+    // Set initial position
+    std::string current_position = "000_002";
 
-    std::vector<std::string> input = {"00", "01", "10", "11", "12", "13", "20", "21", "22", "23", "40", "23", "22", "21", "20", "13", "12", "11", "10", "01", "00"};
-
-    node->process_input(input);
-    
-    rclcpp::spin(node);
+    while (rclcpp::ok()) {
+        std::cout << "Requesting task from position: " << current_position << std::endl;
+        node->request_and_process_path(current_position);
+        
+        rclcpp::spin_some(node);
+        
+        // If no active task is present, wait for 5 seconds before retrying
+        if (!node->has_active_task()) {
+            RCLCPP_INFO(node->get_logger(), "No active task. Waiting 5 seconds before retrying...");
+            rclcpp::sleep_for(std::chrono::seconds(5));
+        }
+    }
     
     rclcpp::shutdown();
     return 0;

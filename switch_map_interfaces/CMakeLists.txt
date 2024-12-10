@@ -14,6 +14,7 @@ find_package(geometry_msgs REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/PathPoint.msg"
   "srv/SingleMap.srv"
   "srv/SendGoalPose.srv"
   "srv/GoalPath.srv"

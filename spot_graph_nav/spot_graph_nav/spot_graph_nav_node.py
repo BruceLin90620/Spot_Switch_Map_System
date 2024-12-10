@@ -1,9 +1,19 @@
+#!/usr/bin/env python3
+
 import argparse
 import logging
 import time
 import yaml
 import sys
 import threading
+from typing import Dict, List, Optional, Tuple
+
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import PoseStamped, Point
+from visualization_msgs.msg import Marker
+from switch_map_interfaces.srv import SingleMap, SendGoalPose
+from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
 import bosdyn.client
 import bosdyn.client.util
@@ -18,28 +28,33 @@ from bosdyn.client.power import PowerClient, power_on_motors, safe_power_off_mot
 from bosdyn.client.robot_command import RobotCommandBuilder, RobotCommandClient, blocking_stand, blocking_sit
 from bosdyn.client.robot_state import RobotStateClient
 
-import rclpy
-from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
-from visualization_msgs.msg import Marker
-from geometry_msgs.msg import Point
-from switch_map_interfaces.srv import SingleMap
-from switch_map_interfaces.srv import SendGoalPose
-from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
-
 sys.path.append('/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/spot_graph_nav/')
 from graph_nav_util import GraphNavInterface
 
 
 class SpotNavigation:
-    def __init__(self, robot, upload_path, lease_client, tag_poses_file='/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/tags_pose_data/tags_pose.yaml'):
+    """
+    Main class for handling Spot robot navigation using Boston Dynamics' GraphNav system.
+    Provides functionality for initialization, movement control, and navigation.
+    """
+    
+    def __init__(self, robot, upload_path: str, lease_client: LeaseClient, 
+                 tag_poses_file: str = '/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/tags_pose_data/tags_pose.yaml'):
+        """
+        Initialize SpotNavigation with required components and configurations.
+        
+        Args:
+            robot: Boston Dynamics robot instance
+            upload_path: Path to upload graph nav maps
+            lease_client: Client for handling robot lease
+            tag_poses_file: Path to YAML file containing AprilTag poses
+        """
         self.graph_nav_interface = GraphNavInterface(robot, upload_path)
-
         self._robot = robot
         self._lease_client = lease_client
         self._upload_filepath = upload_path.rstrip('/')
         self._tag_poses_file = tag_poses_file
-
+        
         self._init_command_dictionary()
         self._take_lease()
         self._initialize()
@@ -55,32 +70,40 @@ class SpotNavigation:
         }
 
     def _initialize(self, *args):
-        while True: 
+        """
+        Initialize the robot's navigation system.
+        Includes clearing graph, uploading new graph, and setting initial localization.
+        """
+        while True:
             try:
+                # Clear and reload graph
                 self._clear_graph()
                 time.sleep(1)
                 self._clear_graph()
                 time.sleep(1)
                 self.graph_nav_interface._upload_graph_and_snapshots()
                 time.sleep(1)
+                
+                # Initialize localization using AprilTags
                 self.graph_nav_interface._set_initial_localization_fiducial()
-                print("initial with apriltag")
+                print("Initial localization with AprilTag complete")
                 time.sleep(1)
+                
                 self.graph_nav_interface._list_graph_waypoint_and_edge_ids()
-                print("list finished")
+                print("Waypoint and edge listing complete")
+                
                 self.load_tag_poses()
                 break
 
             except Exception as e:
                 print(f"Initialization error: {str(e)}")
                 while True:
-                    choice = input("\nPlease choose:\n1. Reinitialize\n2. Exit program\nEnter (1 or 2): ")
+                    choice = input("\nOptions:\n1. Reinitialize\n2. Exit program\nEnter (1 or 2): ")
                     if choice == '1':
                         print("\nRestarting initialization...\n")
-                        break  
+                        break
                     elif choice == '2':
                         print("Program terminated")
-                        import sys
                         sys.exit(0)
                     else:
                         print("Invalid input, please enter 1 or 2")
@@ -189,41 +212,56 @@ class SpotNavigation:
             time.sleep(.5)
             is_finished = self.graph_nav_interface._check_success(nav_to_cmd_id)
 
-    def _navigate_to_anchor(self, *args):
-        if len(args) < 1 or len(args[0]) not in [2, 3, 7]:
-            print('Invalid arguments supplied.')
+    def _navigate_to_anchor(self, coords: List[float]) -> bool:
+        """
+        Navigate robot to a specific anchor point in space.
+        
+        Args:
+            coords: List of coordinates [x, y, z] or [x, y, z, qw, qx, qy, qz]
+        
+        Returns:
+            bool: True if navigation successful, False otherwise
+        """
+        if len(coords) not in [2, 3, 7]:
+            print('Invalid coordinate format supplied.')
             return False
 
-        seed_T_goal = SE3Pose(float(args[0][0]), float(args[0][1]), 0.0, Quat())
-
+        # Create goal pose
+        seed_T_goal = SE3Pose(float(coords[0]), float(coords[1]), 0.0, Quat())
+        
+        # Get current localization
         localization_state = self.graph_nav_interface._graph_nav_client.get_localization_state()
         if not localization_state.localization.waypoint_id:
             print('Robot not localized')
             return False
+            
+        # Set z-coordinate and rotation
         seed_T_goal.z = localization_state.localization.seed_tform_body.position.z
+        if len(coords) == 3:
+            seed_T_goal.rot = Quat.from_yaw(float(coords[2]))
+        elif len(coords) == 7:
+            seed_T_goal.rot = Quat(w=float(coords[3]), x=float(coords[4]), 
+                                 y=float(coords[5]), z=float(coords[6]))
 
-        if len(args[0]) == 3:
-            seed_T_goal.rot = Quat.from_yaw(float(args[0][2]))
-        elif len(args[0]) == 7:
-            seed_T_goal.rot = Quat(w=float(args[0][3]), x=float(args[0][4]), y=float(args[0][5]),
-                                   z=float(args[0][6]))
-
+        # Ensure robot is powered on
         if not self.graph_nav_interface.toggle_power(should_power_on=True):
-            print('Failed to power on the robot, and cannot complete navigate to request.')
+            print('Failed to power on robot')
             return False
 
+        # Execute navigation
         nav_to_cmd_id = None
         is_finished = False
-        print(seed_T_goal)
+        print(f"Navigation goal: {seed_T_goal}")
+        
         while not is_finished:
             try:
                 nav_to_cmd_id = self.graph_nav_interface._graph_nav_client.navigate_to_anchor(
                     seed_T_goal.to_proto(), 1.0, command_id=nav_to_cmd_id)
             except ResponseError as e:
-                print(f'Error while navigating {e}')
-                return False 
+                print(f'Navigation error: {e}')
+                return False
             
-            time.sleep(.5)
+            time.sleep(0.5)
             is_finished = self.graph_nav_interface._check_success(nav_to_cmd_id)
             
         return True
@@ -275,12 +313,22 @@ class SpotNavigation:
             except Exception as e:
                 print(e)
 
+
 class SpotNavigationNode(Node):
+    """
+    ROS2 Node for handling Spot robot navigation.
+    Provides ROS services and subscribers for navigation control.
+    """
+
     def __init__(self):
-        super().__init__('spot_navigation')
+        super().__init__('spot_graph_nav_node')
         
-        self.map_config_path = '/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/config/map_path.yaml'
-        self.map_paths = self.load_map_paths()
+        # Declare parameters with default values
+        self.declare_parameter('map_config_path', 
+            '/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/map_path.yaml')
+        self.declare_parameter('tags_poses_file',
+            '/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/tags_pose_data/tags_pose.yaml')
+        
 
         self.graph_nav = self.create_subscription(PoseStamped, '/move_base_simple/goal', self.graph_nav_callback, 1)
         self.switch_spot_map_service = self.create_service(SingleMap, '/switch_spot_map', self.switch_map_callback)
@@ -292,9 +340,12 @@ class SpotNavigationNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL)
         
         self._goal_service = self.create_service(SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback, qos_profile = qos)
-        # self._action_server = ActionServer(self, SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback)
 
-        # self.graph_nav_target_pose = [0, 0, 0, 0, 0, 0, 0]
+        # Get parameter values
+        self.map_config_path = self.get_parameter('map_config_path').get_parameter_value().string_value
+        self._tag_poses_file = self.get_parameter('tags_poses_file').get_parameter_value().string_value
+        self.map_paths = self.load_map_paths()
+
         self.map_tag_info = 0
         """Run the command-line interface."""
         parser = argparse.ArgumentParser(description=__doc__)
@@ -440,13 +491,11 @@ class SpotNavigationNode(Node):
 def main():
     rclpy.init()
     print("init finished")
-    spot_navigation = SpotNavigationNode()
-
-    # if not estop_gui.main():
+    spot_graph_nav_node = SpotNavigationNode()
     
-    rclpy.spin(spot_navigation)
+    rclpy.spin(spot_graph_nav_node)
     
-    spot_navigation.destroy()
+    spot_graph_nav_node.destroy()
     rclpy.shutdown()
 
 

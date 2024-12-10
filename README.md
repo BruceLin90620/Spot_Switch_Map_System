@@ -1,6 +1,7 @@
 # Spor_Switch_Map_System
 
-An industrial inspection system was developed using Boston Dynamics' Spot. Implementing SLAM and Navigation via Spot SDK on ROS2, it features remote monitoring through a visualization interface. A Spot simulation in Isaac Sim validates algorithms and creates a Digital Twin.
+This project focuses on implementing Boston Dynamics' Spot robot for automated inspection tasks in industrial environments. Under strict cybersecurity regulations, we have developed an advanced automated site inspection and remote monitoring system. This system aims to enhance automation levels and monitoring efficiency in industrial environments, bringing significant operational benefits and competitive advantages to enterprises.
+
 
 <img src="./images/portfolio_spot.jpg" width="500px">
 
@@ -19,5 +20,13 @@ An industrial inspection system was developed using Boston Dynamics' Spot. Imple
 ### City Science Lab Test Demo
 <a href="https://youtu.be/ZL_bb400D3o?si=JQu_fL6QrJcjI_Wx" title="Link Title"><img src="./images/demo_csl.png" alt="Alternate Text" /></a>
 
+- Showcases system performance in controlled laboratory conditions
+- Demonstrates precise navigation and mapping capabilities
+- Validates map switching functionality in indoor environments
+
 ### Outdoor Test Demo
 <a href="https://youtu.be/LI97OdDDBUY?si=Lni16U4oqysuG10Y" title="Link Title"><img src="./images/demo_outdoor.png" alt="Alternate Text" /></a>
+
+- Illustrates system robustness in challenging outdoor conditions
+- Demonstrates real-world application scenarios
+- Validates system performance across varied terrain and lighting conditions
