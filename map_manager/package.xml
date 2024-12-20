@@ -10,6 +10,7 @@
   <depend>rclcpp</depend>
   <depend>rclcpp_action</depend>
   <depend>geometry_msgs</depend>
+  <depend>std_srvs</depend>
   <depend>switch_map_interfaces</depend>
   <depend>routing_agent_interfaces</depend>
 

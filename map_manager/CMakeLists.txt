@@ -11,6 +11,7 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_action REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 find_package(switch_map_interfaces REQUIRED)
 find_package(routing_agent_interfaces REQUIRED)
 find_package(yaml-cpp REQUIRED)
@@ -26,6 +27,7 @@ set(dependencies
   switch_map_interfaces
   routing_agent_interfaces
   geometry_msgs
+  std_srvs
   tf2
   tf2_geometry_msgs
 )

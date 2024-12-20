@@ -1,7 +1,7 @@
 #include "map_manager/map_manager.hpp"
 
 MapManager::MapManager()
-: Node("map_manager"){
+: Node("map_manager"), is_retry_needed_(false), retry_completed_(true) {
 
     goal_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", 1);
     switch_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_map");
@@ -14,8 +14,12 @@ MapManager::MapManager()
     
     send_goal_pose_client_ = this->create_client<switch_map_interfaces::srv::SendGoalPose>("/send_goal_pose", qos_profile);
     nav_service_client_ = this->create_client<routing_agent_interfaces::srv::NavServiceMsg>("/NavService", qos_profile);
-
+    // take_lease_client_ = this->create_client<std_srvs::srv::Trigger>("/take_lease", qos_profile);
     take_lease_client_ = this->create_client<std_srvs::srv::Trigger>("/take_lease_");
+
+    retry_service_ = this->create_service<std_srvs::srv::SetBool>(  "/retry_navigation",
+                                                                    std::bind(&MapManager::handle_retry_request, this, 
+                                                                    std::placeholders::_1, std::placeholders::_2));
 
     RCLCPP_INFO(this->get_logger(), "Map Navigation Node has been initialized.");
 }
@@ -233,13 +237,24 @@ void MapManager::send_goal(
             auto result = result_future.get();
             if (!result->success) {
                 RCLCPP_ERROR(this->get_logger(), "Failed to send goal");
+                retry_completed_ = false;
                 handle_send_failure();
+                
+                // 等待重試完成
+                std::unique_lock<std::mutex> lock(retry_mutex_);
+                retry_cv_.wait(lock, [this]() { return retry_completed_; });
+                
             } else {
                 RCLCPP_INFO(this->get_logger(), "Goal sent successfully");
             }
         } else {
             RCLCPP_ERROR(this->get_logger(), "Service call to send goal failed");
+            retry_completed_ = false;
             handle_send_failure();
+            
+            // 等待重試完成
+            std::unique_lock<std::mutex> lock(retry_mutex_);
+            retry_cv_.wait(lock, [this]() { return retry_completed_; });
         }
     } catch (const std::exception& e) {
         RCLCPP_ERROR(this->get_logger(), "Error processing goal: %s", e.what());
@@ -300,44 +315,170 @@ void MapManager::prepare_goal_pose(
 /**
  * @brief Handle failure in sending goal
  */
-void MapManager::handle_send_failure() 
-{
-    std::cout << "\nGoal sending failed. Please choose an action:\n"
-              << "1: Retry current goal\n"
-              << "2: Abort\n"
-              << "Enter your choice (1-2): ";
+// void MapManager::handle_send_failure() {
+//     // std::cout << "\nGoal sending failed. Please choose an action:\n";
+//     // std::cout << "1: Retry current goal\n";
+//     // std::cout << "2: Abort\n";
+//     // std::cout << "Enter your choice (1-2): ";
+//     RCLCPP_INFO(this->get_logger(), "\nGoal sending failed. Please choose an action:\n");
+//     RCLCPP_INFO(this->get_logger(), "1: Retry current goal\n");
+//     RCLCPP_INFO(this->get_logger(), "2: Abort\n");
+//     RCLCPP_INFO(this->get_logger(), "Enter your choice (1-2): ");
+    
+//     std::string input;
+//     if(!std::getline(std::cin, input) || input.empty()) {
+//         RCLCPP_ERROR(this->get_logger(), "Invalid input, aborting");
+//         path_sequence_.clear();
+//         return;
+//     }
 
-    std::string input;
-    if(!std::getline(std::cin, input) || input.empty()) {
-        RCLCPP_ERROR(this->get_logger(), "Invalid input, aborting");
-        path_sequence_.clear();
+//     switch (input[0]) {
+//         case '1': {
+//             RCLCPP_INFO(this->get_logger(), "Retrying current goal...");
+//             if (request_lease()) {
+//                 const std::string& node_id = path_sequence_[current_sequence_index_];
+//                 send_goal(node_id, 
+//                          current_graph_[node_id],
+//                          current_position_);
+//             } else {
+//                 RCLCPP_ERROR(this->get_logger(), "Failed to acquire lease, retrying...");
+//                 handle_send_failure();
+//             }
+//             break;
+//         }
+//         case '2':
+//             RCLCPP_INFO(this->get_logger(), "Aborting navigation...");
+//             path_sequence_.clear();
+//             break;
+//         default:
+//             RCLCPP_WARN(this->get_logger(), "Invalid input. Please try again.");
+//             handle_send_failure();
+//             break;
+//     }
+// }
+
+
+void MapManager::handle_retry_request(
+    const std::shared_ptr<std_srvs::srv::SetBool::Request> request,
+    std::shared_ptr<std_srvs::srv::SetBool::Response> response)
+{
+    RCLCPP_INFO(this->get_logger(), "Received retry request");
+
+    if (!is_retry_needed_) {
+        RCLCPP_INFO(this->get_logger(), "No retry needed at this time");
+        response->success = false;
+        response->message = "No retry needed at this time";
         return;
     }
 
-    switch (input[0]) {
-        case '1':
-            RCLCPP_INFO(this->get_logger(), "Processing retry request...");
-
-            if (!request_lease()) {
-                RCLCPP_ERROR(this->get_logger(), "Failed to acquire lease");
-                break;
-            }
+    if (request->data) {  // true means retry
+        RCLCPP_INFO(this->get_logger(), "Processing retry request...");
+        if (!request_lease()) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to acquire lease");
+            response->success = false;
+            response->message = "Failed to acquire lease";
+            return;
+        }
         
-            RCLCPP_INFO(this->get_logger(), "Retrying current goal...");
-            send_goal(path_sequence_[0], 
-                     current_graph_[path_sequence_[0]],
+        try {
+            RCLCPP_INFO(this->get_logger(), "Attempting to send goal...");
+            const std::string& node_id = path_sequence_[current_sequence_index_];
+            
+            // 先回覆服務請求
+            response->success = true;
+            response->message = "Retry initiated successfully";
+            is_retry_needed_ = false;
+            
+            // 標記重試完成
+            {
+                std::lock_guard<std::mutex> lock(retry_mutex_);
+                retry_completed_ = true;
+            }
+            retry_cv_.notify_one();
+            
+            // 然後再發送目標
+            send_goal(node_id, 
+                     current_graph_[node_id],
                      current_position_);
-            break;
-        case '2':
-            RCLCPP_INFO(this->get_logger(), "Aborting navigation...");
-            path_sequence_.clear();
-            break;
-        default:
-            RCLCPP_WARN(this->get_logger(), "Invalid input. Please try again.");
-            handle_send_failure();
-            break;
+            
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "Error during retry: %s", e.what());
+            response->success = false;
+            response->message = std::string("Error during retry: ") + e.what();
+            is_retry_needed_ = true;
+            return;
+        }
+    } else {  // false means abort
+        RCLCPP_INFO(this->get_logger(), "Processing abort request...");
+        path_sequence_.clear();
+        response->success = true;
+        response->message = "Navigation aborted successfully";
+        is_retry_needed_ = false;
+        
+        // 標記重試完成（放棄）
+        {
+            std::lock_guard<std::mutex> lock(retry_mutex_);
+            retry_completed_ = true;
+        }
+        retry_cv_.notify_one();
     }
+    
+    RCLCPP_INFO(this->get_logger(), "Request processed. Response: success=%s, message=%s", 
+                response->success ? "true" : "false", response->message.c_str());
 }
+
+void MapManager::handle_send_failure() 
+{
+    is_retry_needed_ = true;
+    RCLCPP_INFO(this->get_logger(), "Goal sending failed. Use the following commands to proceed:");
+    RCLCPP_INFO(this->get_logger(), "To retry: ros2 service call /retry_navigation std_srvs/srv/SetBool \"{data: true}\"");
+    RCLCPP_INFO(this->get_logger(), "To abort: ros2 service call /retry_navigation std_srvs/srv/SetBool \"{data: false}\"");
+}
+
+// void MapManager::handle_send_failure() 
+// {
+//     while (true) {  // 使用迴圈替代遞迴
+//         // std::cout << "\nGoal sending failed. Please choose an action:\n"
+//         //           << "1: Retry current goal\n"
+//         //           << "2: Abort\n"
+//         //           << "Enter your choice (1-2): ";
+
+//         RCLCPP_INFO(this->get_logger(), "\nGoal sending failed. Please choose an action:\n");
+//         RCLCPP_INFO(this->get_logger(), "1: Retry current goal\n");
+//         RCLCPP_INFO(this->get_logger(), "2: Abort\n");
+//         RCLCPP_INFO(this->get_logger(), "Enter your choice (1-2): ");
+
+//         std::string input;
+//         if(!std::getline(std::cin, input) || input.empty()) {
+//             RCLCPP_ERROR(this->get_logger(), "Invalid input, aborting");
+//             path_sequence_.clear();
+//             return;
+//         }
+
+//         switch (input[0]) {
+//             case '1':
+//                 RCLCPP_INFO(this->get_logger(), "Retrying current goal...");
+//                 if (!request_lease()) {
+//                     RCLCPP_ERROR(this->get_logger(), "Failed to acquire lease, please try again");
+//                     continue;  // 繼續迴圈，讓用戶重新選擇
+//                 }
+                
+//                 send_goal(path_sequence_[current_sequence_index_], 
+//                          current_graph_[path_sequence_[current_sequence_index_]],
+//                          current_position_);
+//                 return;  // 成功發送目標後退出
+                
+//             case '2':
+//                 RCLCPP_INFO(this->get_logger(), "Aborting navigation...");
+//                 path_sequence_.clear();
+//                 return;  // 退出函式
+                
+//             default:
+//                 RCLCPP_WARN(this->get_logger(), "Invalid input. Please try again.");
+//                 continue;  // 繼續迴圈，讓用戶重新選擇
+//         }
+//     }
+// }
 
 /**
  * @brief Request a service to take lease

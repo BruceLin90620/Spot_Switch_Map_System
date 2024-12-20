@@ -12,6 +12,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped, Point
 from visualization_msgs.msg import Marker
+from std_srvs.srv import Trigger
 from switch_map_interfaces.srv import SingleMap, SendGoalPose
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy, DurabilityPolicy
 
@@ -40,20 +41,12 @@ class SpotNavigation:
     
     def __init__(self, robot, upload_path: str, lease_client: LeaseClient, 
                  tag_poses_file: str = '/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/spot_graph_nav/tags_pose_data/tags_pose.yaml'):
-        """
-        Initialize SpotNavigation with required components and configurations.
-        
-        Args:
-            robot: Boston Dynamics robot instance
-            upload_path: Path to upload graph nav maps
-            lease_client: Client for handling robot lease
-            tag_poses_file: Path to YAML file containing AprilTag poses
-        """
         self.graph_nav_interface = GraphNavInterface(robot, upload_path)
         self._robot = robot
         self._lease_client = lease_client
         self._upload_filepath = upload_path.rstrip('/')
         self._tag_poses_file = tag_poses_file
+        self.initialization_completed = False
         
         self._init_command_dictionary()
         self._take_lease()
@@ -70,47 +63,42 @@ class SpotNavigation:
         }
 
     def _initialize(self, *args):
-        """
-        Initialize the robot's navigation system.
-        Includes clearing graph, uploading new graph, and setting initial localization.
-        """
-        while True:
-            try:
-                # Clear and reload graph
-                self._clear_graph()
-                time.sleep(1)
-                self._clear_graph()
-                time.sleep(1)
-                self.graph_nav_interface._upload_graph_and_snapshots()
-                time.sleep(1)
-                
-                # Initialize localization using AprilTags
-                self.graph_nav_interface._set_initial_localization_fiducial()
-                print("Initial localization with AprilTag complete")
-                time.sleep(1)
-                
-                self.graph_nav_interface._list_graph_waypoint_and_edge_ids()
-                print("Waypoint and edge listing complete")
-                
-                self.load_tag_poses()
-                break
+        self.initialization_completed = False
+        # while True:
+        try:
+            # Clear and reload graph
+            self._clear_graph()
+            time.sleep(1)
+            self.graph_nav_interface._upload_graph_and_snapshots()
+            time.sleep(1)
+            
+            # Initialize localization using AprilTags
+            self.graph_nav_interface._set_initial_localization_fiducial()
+            print("Initial localization with AprilTag complete")
+            time.sleep(1)
+            
+            self.graph_nav_interface._list_graph_waypoint_and_edge_ids()
+            print("Waypoint and edge listing complete")
+            
+            self.load_tag_poses()
+            self.initialization_completed = True
 
-            except Exception as e:
-                print(f"Initialization error: {str(e)}")
-                while True:
-                    choice = input("\nOptions:\n1. Reinitialize\n2. Exit program\nEnter (1 or 2): ")
-                    if choice == '1':
-                        print("\nRestarting initialization...\n")
-                        break
-                    elif choice == '2':
-                        print("Program terminated")
-                        sys.exit(0)
-                    else:
-                        print("Invalid input, please enter 1 or 2")
+        except Exception as e:
+            print(f"Initialization error: {str(e)}")
+                # while True:
+                #     choice = input("\nOptions:\n1. Reinitialize\n2. Exit program\nEnter (1 or 2): ")
+                #     if choice == '1':
+                #         print("\nRestarting initialization...\n")
+                #         break
+                #     elif choice == '2':
+                #         print("Program terminated")
+                #         sys.exit(0)
+                #     else:
+                #         print("Invalid input, please enter 1 or 2")
 
     def _take_lease(self, *args):
         self._lease_client.take()
-        time.sleep(0.5)
+        time.sleep(0.3)
 
     def _power_on_and_stand(self, *args):
         if not self.graph_nav_interface._powered_on:
@@ -131,6 +119,10 @@ class SpotNavigation:
             print(f"Error: The file {self._tag_poses_file} was not found.")
 
     def _navigate_route(self, *args):
+        if self.initialization_completed == False:
+            print(f"Initialization error: {str(e)}")
+            return
+        
         if len(args[0]) < 1:
             print('No waypoint provided as a destination for navigate to.')
             return
@@ -173,6 +165,10 @@ class SpotNavigation:
             time.sleep(2)
 
     def _navigate_to_tag(self, *args):
+        if self.initialization_completed == False:
+            print(f"Initialization error: {str(e)}")
+            return
+        
         if len(args[0]) < 1:
             print('No waypoint provided as a destination for navigate to.')
             return
@@ -340,6 +336,15 @@ class SpotNavigationNode(Node):
             durability=DurabilityPolicy.TRANSIENT_LOCAL)
         
         self._goal_service = self.create_service(SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback, qos_profile = qos)
+        # self._init_service = self.create_service(Trigger, '/initialize', self._handle_initialize, qos_profile = qos)
+        # self._take_lease_service = self.create_service(Trigger, '/take_lease', self._handle_take_lease, qos_profile = qos)
+        # self._power_on_service = self.create_service(Trigger, '/power_on_and_stand', self._handle_power_on_and_stand, qos_profile = qos)
+        # self._power_off_service = self.create_service(Trigger, '/power_off_and_sit', self._handle_power_off_and_sit, qos_profile = qos)
+        self._init_service = self.create_service(Trigger, '/initialize', self._handle_initialize)
+        self._take_lease_service = self.create_service(Trigger, '/take_lease_', self._handle_take_lease)
+        self._power_on_service = self.create_service(Trigger, '/power_on_and_stand', self._handle_power_on_and_stand)
+        self._power_off_service = self.create_service(Trigger, '/power_off_and_sit', self._handle_power_off_and_sit)
+
 
         # Get parameter values
         self.map_config_path = self.get_parameter('map_config_path').get_parameter_value().string_value
@@ -360,7 +365,8 @@ class SpotNavigationNode(Node):
         self.lease_client = robot.ensure_client(LeaseClient.default_service_name)
 
         print(f"Loading initial map: {self.map_paths[0]}")
-        self.graph_nav_command_line = SpotNavigation(robot, self.map_paths[0], self.lease_client)
+        current_map = 0
+        self.graph_nav_command_line = SpotNavigation(robot, self.map_paths[current_map], self.lease_client)
 
         graph_nav_thread = threading.Thread(target=self.graph_nav_command)
         graph_nav_thread.start()
@@ -369,6 +375,7 @@ class SpotNavigationNode(Node):
         self.load_tag_poses()
 
         # self.timer = self.create_timer(0.01, self.timer_callback)
+
 
     def load_map_paths(self):
         """Load map paths from YAML file"""
@@ -384,6 +391,7 @@ class SpotNavigationNode(Node):
             self.get_logger().error(f"Error reading map paths file: {str(e)}")
             raise
 
+
     def load_tag_poses(self):
         try:
             with open(self._tag_poses_file, 'r') as file:
@@ -391,6 +399,63 @@ class SpotNavigationNode(Node):
             print("Tag poses loaded successfully")
         except FileNotFoundError:
             print(f"Error: The file {self._tag_poses_file} was not found.")
+
+
+    def _handle_initialize(self, request: Trigger.Request, 
+                         response: Trigger.Response) -> Trigger.Response:
+        """Handle initialization service call."""
+        try:
+            self.graph_nav_command_line._initialize()
+            response.success = True
+            response.message = "Spot initialization completed successfully"
+        except Exception as e:
+            response.success = False
+            response.message = f"Initialization failed: {str(e)}"
+            self.get_logger().error(response.message)
+        return response
+    
+
+    def _handle_take_lease(self, request: Trigger.Request, 
+                          response: Trigger.Response) -> Trigger.Response:
+        """Handle take lease service call."""
+        try:
+            self.graph_nav_command_line._take_lease()
+            response.success = True
+            response.message = "Lease taken successfully"
+        except Exception as e:
+            response.success = False
+            response.message = f"Failed to take lease: {str(e)}"
+            self.get_logger().error(response.message)
+        return response
+    
+
+    def _handle_power_on_and_stand(self, request: Trigger.Request, 
+                        response: Trigger.Response) -> Trigger.Response:
+        """Handle power on and stand service call."""
+        try:
+            self.graph_nav_command_line._power_on_and_stand()
+            response.success = True
+            response.message = "Power on and stand completed successfully"
+        except Exception as e:
+            response.success = False
+            response.message = f"Power off failed: {str(e)}"
+            self.get_logger().error(response.message)
+        return response
+
+
+    def _handle_power_off_and_sit(self, request: Trigger.Request, 
+                         response: Trigger.Response) -> Trigger.Response:
+        """Handle power off and sit service call."""
+        try:
+            self.graph_nav_command_line._power_off_and_sit()
+            response.success = True
+            response.message = "Power off and sit completed successfully"
+        except Exception as e:
+            response.success = False
+            response.message = f"Power off failed: {str(e)}"
+            self.get_logger().error(response.message)
+        return response
+
 
     def switch_map_callback(self, request, response):
         if request.mapid < len(self.map_paths):
@@ -402,6 +467,7 @@ class SpotNavigationNode(Node):
             response.success = False
             self.get_logger().error(f'Invalid map ID: {request.mapid}')
         return response
+
 
     def timer_callback(self):
         for tag_id, pose in self.map_tag_info.items():
@@ -443,6 +509,7 @@ class SpotNavigationNode(Node):
 
         self.graph_nav_command_line._navigate_to_anchor(graph_nav_target_pose)
 
+
     def send_goal_pose_callback(self, request, response):
         graph_nav_target_pose = [0, 0, 0, 0, 0, 0, 0]
         graph_nav_target_pose[0] = request.goal_pose.pose.position.x
@@ -469,7 +536,6 @@ class SpotNavigationNode(Node):
         return response
 
         
-
     def graph_nav_command(self):
         print(f"graph nav command line is starting...")
         try:
