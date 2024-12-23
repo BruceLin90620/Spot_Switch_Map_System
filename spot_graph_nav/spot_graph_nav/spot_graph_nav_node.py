@@ -327,7 +327,6 @@ class SpotNavigationNode(Node):
         
 
         self.graph_nav = self.create_subscription(PoseStamped, '/move_base_simple/goal', self.graph_nav_callback, 1)
-        self.switch_spot_map_service = self.create_service(SingleMap, '/switch_spot_map', self.switch_map_callback)
         self.publisher_ = self.create_publisher(Marker, '/text_marker', 10)
 
         qos = QoSProfile(
@@ -335,6 +334,7 @@ class SpotNavigationNode(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL)
         
+        self.switch_spot_map_service = self.create_service(SingleMap, '/switch_spot_map', self.switch_map_callback, qos_profile = qos)
         self._goal_service = self.create_service(SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback, qos_profile = qos)
         # self._init_service = self.create_service(Trigger, '/initialize', self._handle_initialize, qos_profile = qos)
         # self._take_lease_service = self.create_service(Trigger, '/take_lease', self._handle_take_lease, qos_profile = qos)

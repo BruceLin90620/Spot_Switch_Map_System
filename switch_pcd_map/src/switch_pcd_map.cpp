@@ -14,13 +14,15 @@ SwitchMapNode::SwitchMapNode(const rclcpp::NodeOptions & options):
     
     tags_poses_file_ = this->declare_parameter<std::string>(
         "tags_poses_file",
-        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/tags_position.yaml"
+        // "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/tags_position.yaml"
+        "src/Spot_Switch_Map_System/switch_map_system_bringup/config/tags_position.yaml"
     );
     
     // Load configurations and initial map
     load_map_paths(this->declare_parameter<std::string>(
         "config_path",
-        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/map_path.yaml"
+        // "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/map_path.yaml"
+        "src/Spot_Switch_Map_System/switch_map_system_bringup/config/map_path.yaml"
     ));
     load_all_tag_poses();
     
