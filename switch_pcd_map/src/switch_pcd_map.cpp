@@ -9,7 +9,7 @@ SwitchMapNode::SwitchMapNode(const rclcpp::NodeOptions & options):
     cloud_topic_ = "/pointcloud_map";
     tf_frame_ = this->declare_parameter("tf_frame", tf_frame_);
     period_ms_ = this->declare_parameter("publishing_period_ms", 3000);
-    current_map_id_ = this->declare_parameter("current_map_id", 0);
+    current_map_id_ = this->declare_parameter("current_map_id", 1);
     current_area_ = this->declare_parameter<std::string>("current_area", "5152");
     
     tags_poses_file_ = this->declare_parameter<std::string>(
