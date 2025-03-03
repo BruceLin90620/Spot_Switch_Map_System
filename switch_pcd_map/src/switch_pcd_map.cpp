@@ -9,18 +9,20 @@ SwitchMapNode::SwitchMapNode(const rclcpp::NodeOptions & options):
     cloud_topic_ = "/pointcloud_map";
     tf_frame_ = this->declare_parameter("tf_frame", tf_frame_);
     period_ms_ = this->declare_parameter("publishing_period_ms", 3000);
-    current_map_id_ = this->declare_parameter("current_map_id", 0);
+    current_map_id_ = this->declare_parameter("current_map_id", 1);
     current_area_ = this->declare_parameter<std::string>("current_area", "5152");
     
     tags_poses_file_ = this->declare_parameter<std::string>(
         "tags_poses_file",
-        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/tags_position.yaml"
+        // "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/tags_position.yaml"
+        "src/Spot_Switch_Map_System/switch_map_system_bringup/config/tags_position.yaml"
     );
     
     // Load configurations and initial map
     load_map_paths(this->declare_parameter<std::string>(
         "config_path",
-        "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/map_path.yaml"
+        // "/home/spot/spot_map_switching_ws/src/Spot_Switch_Map_System/switch_map_system_bringup/config/map_path.yaml"
+        "src/Spot_Switch_Map_System/switch_map_system_bringup/config/map_path.yaml"
     ));
     load_all_tag_poses();
     

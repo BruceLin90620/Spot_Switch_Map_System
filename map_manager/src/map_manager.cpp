@@ -5,13 +5,13 @@ MapManager::MapManager()
 
     goal_publisher_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/move_base_simple/goal", 1);
     switch_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_map");
-    switch_spot_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_spot_map");
     
     // Configure QoS profile for reliable communication
     auto qos_profile = rmw_qos_profile_services_default;
     qos_profile.reliability = RMW_QOS_POLICY_RELIABILITY_RELIABLE;
     qos_profile.durability = RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL;
     
+    switch_spot_map_client_ = this->create_client<switch_map_interfaces::srv::SingleMap>("/switch_spot_map", qos_profile);
     send_goal_pose_client_ = this->create_client<switch_map_interfaces::srv::SendGoalPose>("/send_goal_pose", qos_profile);
     nav_service_client_ = this->create_client<routing_agent_interfaces::srv::NavServiceMsg>("/NavService", qos_profile);
 

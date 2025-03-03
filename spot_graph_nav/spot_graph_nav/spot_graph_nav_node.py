@@ -230,14 +230,14 @@ class SpotNavigation:
         if not localization_state.localization.waypoint_id:
             print('Robot not localized')
             return False
-            
+                
         # Set z-coordinate and rotation
         seed_T_goal.z = localization_state.localization.seed_tform_body.position.z
         if len(coords) == 3:
             seed_T_goal.rot = Quat.from_yaw(float(coords[2]))
         elif len(coords) == 7:
             seed_T_goal.rot = Quat(w=float(coords[3]), x=float(coords[4]), 
-                                 y=float(coords[5]), z=float(coords[6]))
+                                y=float(coords[5]), z=float(coords[6]))
 
         # Ensure robot is powered on
         if not self.graph_nav_interface.toggle_power(should_power_on=True):
@@ -249,7 +249,14 @@ class SpotNavigation:
         is_finished = False
         print(f"Navigation goal: {seed_T_goal}")
         
+        # Add timeout
+        start_time = time.time()
         while not is_finished:
+            # Check timeout
+            if time.time() - start_time > 10.0:  # 10 second timeout
+                print('Navigation timeout after 10 seconds')
+                return False
+                
             try:
                 nav_to_cmd_id = self.graph_nav_interface._graph_nav_client.navigate_to_anchor(
                     seed_T_goal.to_proto(), 1.0, command_id=nav_to_cmd_id)
@@ -257,9 +264,8 @@ class SpotNavigation:
                 print(f'Navigation error: {e}')
                 return False
             
-            time.sleep(0.5)
             is_finished = self.graph_nav_interface._check_success(nav_to_cmd_id)
-            
+                
         return True
 
     def _on_quit(self):
@@ -327,7 +333,6 @@ class SpotNavigationNode(Node):
         
 
         self.graph_nav = self.create_subscription(PoseStamped, '/move_base_simple/goal', self.graph_nav_callback, 1)
-        self.switch_spot_map_service = self.create_service(SingleMap, '/switch_spot_map', self.switch_map_callback)
         self.publisher_ = self.create_publisher(Marker, '/text_marker', 10)
 
         qos = QoSProfile(
@@ -335,6 +340,7 @@ class SpotNavigationNode(Node):
             reliability=ReliabilityPolicy.RELIABLE,
             durability=DurabilityPolicy.TRANSIENT_LOCAL)
         
+        self.switch_spot_map_service = self.create_service(SingleMap, '/switch_spot_map', self.switch_map_callback, qos_profile = qos)
         self._goal_service = self.create_service(SendGoalPose, 'send_goal_pose', self.send_goal_pose_callback, qos_profile = qos)
         # self._init_service = self.create_service(Trigger, '/initialize', self._handle_initialize, qos_profile = qos)
         # self._take_lease_service = self.create_service(Trigger, '/take_lease', self._handle_take_lease, qos_profile = qos)

@@ -6,7 +6,7 @@ int main(int argc, char * argv[])
     auto node = std::make_shared<MapManager>();
 
     // Set initial position
-    std::string current_position = "000_002";
+    std::string current_position = "000_019";
 
     while (rclcpp::ok()) {
         std::cout << "Requesting task from position: " << current_position << std::endl;
