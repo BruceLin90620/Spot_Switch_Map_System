@@ -1,21 +1,17 @@
 # Spor_Switch_Map_System
 
 ## Overview
-This project focuses on implementing Boston Dynamics' Spot robot for automated inspection tasks in industrial environments. Under strict cybersecurity regulations, we have developed an advanced automated site inspection and remote monitoring system. This system aims to enhance automation levels and monitoring efficiency in industrial environments, bringing significant operational benefits and competitive advantages to enterprises.
+This work presents an advanced inspection system utilizing Boston Dynamics' Spot for autonomous industrial monitoring in collaboration with TSMC. The system integrates Routing System, Multi-Map navigation, and digital twin simulation through NVIDIA Isaac Sim to enhance operational efficiency in large-scale environments. By combining these technologies, we establish a scalable, memory-efficient, and highly reliable framework for autonomous industrial inspection.
 
-![Spot Robot](./images/portfolio_spot.jpg)
 
-## **Framework**
+## **Map Switching System**
+- Optimizes memory usage by eliminating the need to load an entire large-scale map
 
-### **Map Manager**
-- Responsible for determining when to switch between maps and sending goal poses to the robot.
+- Enhances scalability, enabling efficient expansion of mapped areas
 
-### **Spot Graph Nav**
-- Enables autonomous navigation by allowing Spot to navigate to target locations based on user-defined waypoints.
+- Ensures precise localization, with AprilTags setting Spot’s initial pose after each transition
 
-### **Switch PCD Map**
-- Handles map publishing to the localization system and determines the robot's initial position by detecting nearby AprilTags.
-
+By partitioning large spaces into manageable sub-maps and leveraging AprilTag-assisted positioning, we enable reliable and efficient navigation throughout extensive factory environments.
 
 ## **Demo**
 
