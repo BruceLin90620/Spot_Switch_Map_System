@@ -87,3 +87,8 @@ python3 graph_visualizer.py
 
 **Note:** Modify line 30 in `graph_visualizer.py` to match the corresponding waypoint file path.
 
+
+### reassign task
+```sh
+ros2 run routing_agent routingClient src/routing_engine/test_run/sample_data/task_data.json src/routing_engine/test_run/sample_data/vehicle_data.json
+```

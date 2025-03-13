@@ -253,8 +253,8 @@ class SpotNavigation:
         start_time = time.time()
         while not is_finished:
             # Check timeout
-            if time.time() - start_time > 10.0:  # 10 second timeout
-                print('Navigation timeout after 10 seconds')
+            if time.time() - start_time > 20.0:  # 10 second timeout
+                print('Navigation timeout after 20 seconds')
                 return False
                 
             try:
